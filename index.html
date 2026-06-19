@@ -3,27 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>wasdwry 的博客</title>
+<title>wasdwry 的个人博客</title>
 <style>
+:root{
+    --text:#1f2933;
+    --muted:#607084;
+    --line:rgba(31,41,51,0.12);
+    --panel:rgba(255,255,255,0.94);
+    --primary:#1769aa;
+    --primary-dark:#0f4d7d;
+    --green:#2f7d5b;
+}
+*{ box-sizing:border-box; }
 body{
     margin:0;
     font-family:Arial,"Microsoft YaHei",sans-serif;
     background:#eef4f8 url("https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1800&q=80") center top/cover fixed no-repeat;
-    color:#1f2933;
+    color:var(--text);
 }
 body::before{
     content:"";
     position:fixed;
     inset:0;
-    background:linear-gradient(120deg,rgba(247,250,252,0.9),rgba(230,240,247,0.74));
+    background:linear-gradient(120deg,rgba(247,250,252,0.9),rgba(230,240,247,0.76));
     z-index:-1;
 }
 header{
-    min-height:420px;
-    padding:34px 20px 70px;
+    min-height:430px;
+    padding:34px 20px 72px;
 }
 .navbar,.hero,.container{
-    max-width:1050px;
+    max-width:1080px;
     margin-left:auto;
     margin-right:auto;
 }
@@ -49,15 +59,16 @@ nav a{
     font-weight:600;
 }
 .hero{
-    margin-top:86px;
+    margin-top:84px;
 }
 .hero h1{
     margin:0;
-    font-size:clamp(38px,7vw,76px);
+    font-size:clamp(40px,7vw,76px);
     line-height:1;
+    letter-spacing:0;
 }
 .hero p{
-    max-width:620px;
+    max-width:650px;
     margin:22px 0 0;
     color:#3f5368;
     font-size:19px;
@@ -77,14 +88,15 @@ nav a{
     padding:0 18px;
     border-radius:8px;
     border:1px solid transparent;
-    background:#1769aa;
+    background:var(--primary);
     color:white;
     text-decoration:none;
     font-weight:700;
     box-shadow:0 10px 24px rgba(23,105,170,0.22);
+    cursor:pointer;
 }
 .button:hover{
-    background:#0f4d7d;
+    background:var(--primary-dark);
 }
 .button.secondary{
     background:rgba(255,255,255,0.78);
@@ -92,13 +104,17 @@ nav a{
     border-color:rgba(22,50,77,0.2);
     box-shadow:none;
 }
+.button.green{
+    background:var(--green);
+    box-shadow:0 10px 24px rgba(47,125,91,0.22);
+}
 .container{
     margin-top:-54px;
-    padding:0 20px 50px;
+    padding:0 20px 52px;
 }
 .panel{
-    background:rgba(255,255,255,0.92);
-    border:1px solid rgba(31,41,51,0.12);
+    background:var(--panel);
+    border:1px solid var(--line);
     border-radius:8px;
     padding:26px;
     box-shadow:0 18px 45px rgba(31,41,51,0.12);
@@ -106,7 +122,7 @@ nav a{
 }
 .section-title{
     display:flex;
-    align-items:end;
+    align-items:flex-end;
     justify-content:space-between;
     gap:20px;
     margin-bottom:18px;
@@ -115,28 +131,31 @@ nav a{
     margin:0;
     font-size:26px;
 }
-.section-title span,.tool-card p,.post p{
-    color:#5d6b7a;
+.section-title span,.tool-card p,.post p,.diary-card p{
+    color:var(--muted);
 }
-.quick-tools,.posts{
+.quick-tools,.posts,.diary-list{
     display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
     gap:14px;
 }
-.posts{
+.quick-tools{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.posts,.diary-list{
     grid-template-columns:repeat(2,minmax(0,1fr));
 }
-.tool-card,.post{
+.tool-card,.post,.diary-card{
     background:white;
     padding:20px;
-    border:1px solid rgba(31,41,51,0.12);
+    border:1px solid var(--line);
     border-radius:8px;
     box-shadow:0 8px 22px rgba(31,41,51,0.07);
 }
-.tool-card h3,.post h2{
+.tool-card h3,.post h3,.diary-card h3{
     margin:0 0 10px;
+    line-height:1.35;
 }
-.tool-card p,.post p{
+.tool-card p,.post p,.diary-card p{
     margin:0 0 16px;
     line-height:1.7;
 }
@@ -145,8 +164,8 @@ nav a{
     padding:0 14px;
     font-size:14px;
 }
-.post a{
-    color:#1769aa;
+.post a,.diary-card a{
+    color:var(--primary);
     text-decoration:none;
     font-weight:700;
 }
@@ -162,14 +181,71 @@ nav a{
     font-weight:700;
     margin-bottom:12px;
 }
+.diary-workspace{
+    display:grid;
+    grid-template-columns:0.95fr 1.05fr;
+    gap:18px;
+}
+.diary-form label{
+    display:block;
+    margin:0 0 7px;
+    color:#34495e;
+    font-weight:700;
+}
+.diary-form input,.diary-form textarea{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:12px;
+    font:inherit;
+    color:var(--text);
+    background:white;
+    outline:none;
+}
+.diary-form textarea{
+    min-height:210px;
+    resize:vertical;
+    line-height:1.7;
+}
+.field{
+    margin-bottom:14px;
+}
+.diary-note{
+    background:#f6fbf8;
+    border:1px solid rgba(47,125,91,0.18);
+    border-radius:8px;
+    padding:16px;
+}
+.diary-note h3{
+    margin:0 0 10px;
+}
+.diary-note p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.75;
+}
+.saved-diary{
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px solid var(--line);
+}
+.saved-diary h4{
+    margin:0 0 8px;
+}
+.saved-diary p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.7;
+    white-space:pre-wrap;
+}
 footer{
     text-align:center;
     padding:34px 20px 44px;
     color:#536170;
 }
-@media (max-width:760px){
+@media (max-width:780px){
     header{
-        min-height:520px;
+        min-height:540px;
     }
     .navbar,.section-title{
         align-items:flex-start;
@@ -181,7 +257,7 @@ footer{
     .hero{
         margin-top:62px;
     }
-    .quick-tools,.posts{
+    .quick-tools,.posts,.diary-list,.diary-workspace{
         grid-template-columns:1fr;
     }
 }
@@ -194,6 +270,7 @@ footer{
         <div class="logo">wasdwry.github.io</div>
         <nav>
             <a href="#top">首页</a>
+            <a href="#diary">日记</a>
             <a href="#posts">文章</a>
             <a href="#tools">写作</a>
             <a href="https://github.com/wasdwry/wasdwry.github.io" target="_blank" rel="noopener">GitHub</a>
@@ -201,20 +278,77 @@ footer{
     </div>
 
     <div class="hero" id="top">
-        <h1>Blog</h1>
-        <p>记录技术学习、生活感悟等。</p>
+        <h1>Blog & Diary</h1>
+        <p>记录技术学习、生活感悟和每天值得留下的片刻。这里不只是文章列表，也是一间可以慢慢写下自己的日记房间。</p>
         <div class="actions">
-            <a class="button" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">+ 创建新文章</a>
-            <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io/edit/main/index.html" target="_blank" rel="noopener">编辑首页</a>
-            <a class="button secondary" href="#posts">查看文章</a>
+            <a class="button green" href="#write-diary">写一篇日记</a>
+            <a class="button" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">+ 创建日记文件</a>
+            <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">创建新文章</a>
         </div>
     </div>
 </header>
 
 <main class="container">
+    <section class="panel" id="diary">
+        <div class="section-title">
+            <h2>生活日记</h2>
+            <span>给生活留一点安静的位置</span>
+        </div>
+        <div class="diary-list">
+            <article class="diary-card">
+                <div class="tagline">今日心情</div>
+                <h3>今天想记录什么？</h3>
+                <p>可以写一段生活片段、学习心得、遇到的人、完成的小事，或者只是当天的心情。</p>
+                <a href="#write-diary">马上写日记 →</a>
+            </article>
+            <article class="diary-card">
+                <div class="tagline">日记模板</div>
+                <h3>一个简单的记录格式</h3>
+                <p>日期、天气、心情、今天发生了什么、我学到了什么、明天想做什么。</p>
+                <a href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/2026-06-19.md" target="_blank" rel="noopener">用模板创建 →</a>
+            </article>
+        </div>
+    </section>
+
+    <section class="panel" id="write-diary">
+        <div class="section-title">
+            <h2>写日记</h2>
+            <span>先在这里写草稿，再发布到 GitHub</span>
+        </div>
+        <div class="diary-workspace">
+            <form class="diary-form" id="diaryForm">
+                <div class="field">
+                    <label for="diaryTitle">标题</label>
+                    <input id="diaryTitle" type="text" placeholder="例如：今天的小确幸">
+                </div>
+                <div class="field">
+                    <label for="diaryMood">心情</label>
+                    <input id="diaryMood" type="text" placeholder="例如：平静、开心、有点累">
+                </div>
+                <div class="field">
+                    <label for="diaryContent">内容</label>
+                    <textarea id="diaryContent" placeholder="今天发生了什么？有什么想法值得留下？"></textarea>
+                </div>
+                <div class="actions">
+                    <button class="button green" type="submit">保存草稿</button>
+                    <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">发布到 GitHub</a>
+                </div>
+            </form>
+            <aside class="diary-note">
+                <h3>小提示</h3>
+                <p>这里的“保存草稿”会把内容保存在你当前浏览器里，适合先临时记录。想让日记变成网站内容时，点击“发布到 GitHub”，把草稿复制进去提交即可。</p>
+                <div class="saved-diary" id="savedDiary">
+                    <h4>最近草稿</h4>
+                    <p>还没有保存草稿。</p>
+                </div>
+            </aside>
+        </div>
+    </section>
+
     <section class="panel" id="tools">
         <div class="section-title">
             <h2>写作快捷入口</h2>
+            <span>不用单独做登录页，直接使用 GitHub 的编辑能力</span>
         </div>
         <div class="quick-tools">
             <article class="tool-card">
@@ -223,23 +357,78 @@ footer{
                 <a class="button" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">开始写</a>
             </article>
             <article class="tool-card">
-                <h3>修改首页内容</h3>
-                <p>想改标题、简介、导航或文章卡片时，可以从这里直接进入编辑。</p>
-                <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io/edit/main/index.html" target="_blank" rel="noopener">去修改</a>
+                <h3>创建日记</h3>
+                <p>打开 GitHub 的新建文件页，默认放到 diary 目录，方便按日期整理生活记录。</p>
+                <a class="button green" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">写日记</a>
             </article>
             <article class="tool-card">
                 <h3>管理网站文件</h3>
-                <p>查看图片、文章、页面文件，也可以上传新的背景图或素材。</p>
+                <p>查看图片、文章、日记和页面文件，也可以上传新的背景图或素材。</p>
                 <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io" target="_blank" rel="noopener">打开仓库</a>
             </article>
         </div>
     </section>
 
+    <section class="panel" id="posts">
+        <div class="section-title">
+            <h2>最新文章</h2>
+            <span>文章和日记可以慢慢分开整理</span>
+        </div>
+        <div class="posts">
+            <article class="post">
+                <div class="tagline">第一篇</div>
+                <h3>欢迎来到我的博客，使用 ChatGPT 生成。dpdns.org</h3>
+                <p>这是我的第一篇文章，我将在这里记录技术学习与生活感悟。</p>
+                <a href="#">阅读全文 →</a>
+            </article>
+            <article class="post">
+                <div class="tagline">建站记录</div>
+                <h3>Github Pages 建站体验</h3>
+                <p>使用 Github Pages 搭建个人网站非常方便，而且免费。</p>
+                <a href="#">阅读全文 →</a>
+            </article>
+        </div>
+    </section>
 </main>
 
 <footer>
 © 2026 wasdwry
 </footer>
+
+<script>
+const form = document.getElementById("diaryForm");
+const titleInput = document.getElementById("diaryTitle");
+const moodInput = document.getElementById("diaryMood");
+const contentInput = document.getElementById("diaryContent");
+const savedDiary = document.getElementById("savedDiary");
+
+function renderDraft(){
+    const draft = JSON.parse(localStorage.getItem("wasdwryDiaryDraft") || "null");
+    if(!draft){
+        savedDiary.innerHTML = "<h4>最近草稿</h4><p>还没有保存草稿。</p>";
+        return;
+    }
+    savedDiary.innerHTML = `
+        <h4>${draft.title || "未命名日记"}</h4>
+        <p>心情：${draft.mood || "未填写"}</p>
+        <p>${draft.content || "还没有正文。"}</p>
+    `;
+}
+
+form.addEventListener("submit", function(event){
+    event.preventDefault();
+    const draft = {
+        title:titleInput.value.trim(),
+        mood:moodInput.value.trim(),
+        content:contentInput.value.trim(),
+        savedAt:new Date().toISOString()
+    };
+    localStorage.setItem("wasdwryDiaryDraft", JSON.stringify(draft));
+    renderDraft();
+});
+
+renderDraft();
+</script>
 
 </body>
 </html>

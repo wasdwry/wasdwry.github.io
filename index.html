@@ -331,6 +331,7 @@ footer{
                     </div>
                     <div class="actions">
                         <button class="button green" type="submit">保存草稿</button>
+                        <button class="button secondary" id="copyDiaryMarkdown" type="button">复制日记 Markdown</button>
                         <a class="button secondary" id="createDiaryLink" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">发布到 GitHub</a>
                     </div>
                     <p class="form-note" id="diaryDraftStatus">还没有保存日记草稿。</p>
@@ -358,6 +359,7 @@ footer{
                     </div>
                     <div class="actions">
                         <button class="button" type="submit">保存草稿</button>
+                        <button class="button secondary" id="copyPostMarkdown" type="button">复制文章 Markdown</button>
                         <a class="button secondary" id="createPostLink" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">发布到 GitHub</a>
                     </div>
                     <p class="form-note" id="postDraftStatus">还没有保存文章草稿。</p>
@@ -422,6 +424,7 @@ const fields = {
         tags:document.getElementById("diaryTags"),
         content:document.getElementById("diaryContent"),
         link:document.getElementById("createDiaryLink"),
+        copy:document.getElementById("copyDiaryMarkdown"),
         status:document.getElementById("diaryDraftStatus")
     },
     post:{
@@ -431,6 +434,7 @@ const fields = {
         tags:document.getElementById("postTags"),
         content:document.getElementById("postContent"),
         link:document.getElementById("createPostLink"),
+        copy:document.getElementById("copyPostMarkdown"),
         status:document.getElementById("postDraftStatus")
     }
 };
@@ -502,10 +506,7 @@ function newFileUrl(type){
     const folder = type === "diary" ? "diary" : "posts";
     const fallback = type === "diary" ? "new-diary" : "new-article";
     const filename = `${folder}/${filenameDate(date)}-${slugify(group.title.value, fallback)}.md`;
-    const params = new URLSearchParams({
-        filename,
-        value:markdownTemplate(type)
-    });
+    const params = new URLSearchParams({ filename });
     return `${repoBase}/new/${branch}?${params.toString()}`;
 }
 
@@ -526,6 +527,26 @@ function saveDraft(type){
     if(type === "diary") draft.mood = group.mood.value.trim();
     localStorage.setItem(`wasdwry-${type}-draft`, JSON.stringify(draft));
     group.status.textContent = `草稿已保存：${new Date().toLocaleString()}`;
+}
+
+async function copyMarkdown(type){
+    const group = fields[type];
+    const markdown = markdownTemplate(type);
+    try{
+        await navigator.clipboard.writeText(markdown);
+        group.status.textContent = "Markdown 已复制，可以粘贴到 GitHub 页面。";
+    }catch(error){
+        const helper = document.createElement("textarea");
+        helper.value = markdown;
+        helper.setAttribute("readonly","");
+        helper.style.position = "fixed";
+        helper.style.left = "-9999px";
+        document.body.appendChild(helper);
+        helper.select();
+        document.execCommand("copy");
+        document.body.removeChild(helper);
+        group.status.textContent = "Markdown 已复制，可以粘贴到 GitHub 页面。";
+    }
 }
 
 function loadDraft(type){
@@ -682,6 +703,10 @@ Object.entries(fields).forEach(([type,group]) => {
     group.form.addEventListener("submit", event => {
         event.preventDefault();
         saveDraft(type);
+        updateCreateLinks();
+    });
+    group.copy.addEventListener("click", () => {
+        copyMarkdown(type);
         updateCreateLinks();
     });
 });

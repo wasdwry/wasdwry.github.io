@@ -13,6 +13,7 @@
     --primary:#1769aa;
     --primary-dark:#0f4d7d;
     --green:#2f7d5b;
+    --danger:#b42318;
 }
 *{ box-sizing:border-box; }
 body{
@@ -33,7 +34,7 @@ header{
     padding:34px 20px 72px;
 }
 .navbar,.hero,.container{
-    max-width:1080px;
+    max-width:1120px;
     margin-left:auto;
     margin-right:auto;
 }
@@ -68,24 +69,26 @@ nav a{
     letter-spacing:0;
 }
 .hero p{
-    max-width:650px;
+    max-width:680px;
     margin:22px 0 0;
     color:#3f5368;
     font-size:19px;
     line-height:1.75;
 }
-.actions{
+.actions,.item-actions,.tag-filter{
     display:flex;
     flex-wrap:wrap;
-    gap:12px;
+    gap:10px;
+}
+.actions{
     margin-top:30px;
 }
 .button{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    min-height:44px;
-    padding:0 18px;
+    min-height:42px;
+    padding:0 16px;
     border-radius:8px;
     border:1px solid transparent;
     background:var(--primary);
@@ -94,6 +97,7 @@ nav a{
     font-weight:700;
     box-shadow:0 10px 24px rgba(23,105,170,0.22);
     cursor:pointer;
+    font:inherit;
 }
 .button:hover{
     background:var(--primary-dark);
@@ -107,6 +111,17 @@ nav a{
 .button.green{
     background:var(--green);
     box-shadow:0 10px 24px rgba(47,125,91,0.22);
+}
+.button.danger{
+    background:white;
+    color:var(--danger);
+    border-color:rgba(180,35,24,0.28);
+    box-shadow:none;
+}
+.button.small{
+    min-height:34px;
+    padding:0 12px;
+    font-size:14px;
 }
 .container{
     margin-top:-54px;
@@ -131,68 +146,35 @@ nav a{
     margin:0;
     font-size:26px;
 }
-.section-title span,.tool-card p,.post p,.diary-card p{
+.section-title span,.content-card p,.form-note,.empty-state{
     color:var(--muted);
 }
-.quick-tools,.posts,.diary-list{
+.compose-grid,.timeline-grid{
     display:grid;
-    gap:14px;
-}
-.quick-tools{
-    grid-template-columns:repeat(3,minmax(0,1fr));
-}
-.posts,.diary-list{
     grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px;
 }
-.tool-card,.post,.diary-card{
+.compose-card,.content-card{
     background:white;
     padding:20px;
     border:1px solid var(--line);
     border-radius:8px;
     box-shadow:0 8px 22px rgba(31,41,51,0.07);
 }
-.tool-card h3,.post h3,.diary-card h3{
-    margin:0 0 10px;
+.compose-card h3,.content-card h3{
+    margin:0 0 14px;
     line-height:1.35;
 }
-.tool-card p,.post p,.diary-card p{
-    margin:0 0 16px;
-    line-height:1.7;
+.field{
+    margin-bottom:14px;
 }
-.tool-card .button{
-    min-height:38px;
-    padding:0 14px;
-    font-size:14px;
-}
-.post a,.diary-card a{
-    color:var(--primary);
-    text-decoration:none;
-    font-weight:700;
-}
-.tagline{
-    display:inline-flex;
-    align-items:center;
-    min-height:28px;
-    padding:0 10px;
-    border-radius:999px;
-    background:#fff7e1;
-    color:#7a5500;
-    font-size:13px;
-    font-weight:700;
-    margin-bottom:12px;
-}
-.diary-workspace{
-    display:grid;
-    grid-template-columns:0.95fr 1.05fr;
-    gap:18px;
-}
-.diary-form label{
+label{
     display:block;
     margin:0 0 7px;
     color:#34495e;
     font-weight:700;
 }
-.diary-form input,.diary-form textarea{
+input,textarea{
     width:100%;
     border:1px solid var(--line);
     border-radius:8px;
@@ -202,48 +184,76 @@ nav a{
     background:white;
     outline:none;
 }
-.diary-form textarea{
-    min-height:210px;
+textarea{
+    min-height:180px;
     resize:vertical;
     line-height:1.7;
 }
-.field{
-    margin-bottom:14px;
-}
-.diary-note{
-    background:#f6fbf8;
-    border:1px solid rgba(47,125,91,0.18);
-    border-radius:8px;
-    padding:16px;
-}
-.diary-note h3{
-    margin:0 0 10px;
-}
-.diary-note p{
-    margin:0;
-    color:var(--muted);
-    line-height:1.75;
-}
-.saved-diary{
-    margin-top:16px;
-    padding-top:16px;
-    border-top:1px solid var(--line);
-}
-.saved-diary h4{
-    margin:0 0 8px;
-}
-.saved-diary p{
-    margin:0;
-    color:var(--muted);
+.form-note{
+    margin:12px 0 0;
     line-height:1.7;
-    white-space:pre-wrap;
+}
+.tag-filter{
+    margin:4px 0 18px;
+}
+.tag-button{
+    min-height:34px;
+    padding:0 12px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:white;
+    color:#34495e;
+    cursor:pointer;
+    font:inherit;
+}
+.tag-button.active{
+    background:#16324d;
+    color:white;
+    border-color:#16324d;
+}
+.content-card{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+.content-card h3{
+    margin-bottom:0;
+}
+.content-card p{
+    margin:0;
+    line-height:1.7;
+}
+.meta,.tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    color:var(--muted);
+    font-size:14px;
+}
+.tag{
+    display:inline-flex;
+    align-items:center;
+    min-height:26px;
+    padding:0 9px;
+    border-radius:999px;
+    background:#fff7e1;
+    color:#7a5500;
+    font-size:13px;
+    font-weight:700;
+}
+.empty-state{
+    padding:18px;
+    border:1px dashed rgba(96,112,132,0.45);
+    border-radius:8px;
+    background:rgba(255,255,255,0.72);
+    line-height:1.7;
 }
 footer{
     text-align:center;
     padding:34px 20px 44px;
     color:#536170;
 }
-@media (max-width:780px){
+@media (max-width:820px){
     header{
         min-height:540px;
     }
@@ -257,7 +267,7 @@ footer{
     .hero{
         margin-top:62px;
     }
-    .quick-tools,.posts,.diary-list,.diary-workspace{
+    .compose-grid,.timeline-grid{
         grid-template-columns:1fr;
     }
 }
@@ -270,123 +280,119 @@ footer{
         <div class="logo">wasdwry.github.io</div>
         <nav>
             <a href="#top">首页</a>
-            <a href="#diary">日记</a>
-            <a href="#posts">文章</a>
-            <a href="#tools">写作</a>
+            <a href="#compose">写作</a>
+            <a href="#diaryTimeline">日记</a>
+            <a href="#postTimeline">文章</a>
+            <a href="#tags">标签</a>
             <a href="https://github.com/wasdwry/wasdwry.github.io" target="_blank" rel="noopener">GitHub</a>
         </nav>
     </div>
 
     <div class="hero" id="top">
         <h1>Blog & Diary</h1>
-        <p>记录技术学习、生活感悟和每天值得留下的片刻。这里不只是文章列表，也是一间可以慢慢写下自己的日记房间。</p>
+        <p>记录技术学习、生活感悟和每天值得留下的片刻。标题由你自己写，排序交给时间；标签可有可无，但它们会让回看变得更容易。</p>
         <div class="actions">
-            <a class="button green" href="#write-diary">写一篇日记</a>
-            <a class="button" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">+ 创建日记文件</a>
-            <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">创建新文章</a>
+            <a class="button green" href="#compose">写日记</a>
+            <a class="button" href="#compose">写文章</a>
+            <a class="button secondary" href="#tags">按标签检索</a>
         </div>
     </div>
 </header>
 
 <main class="container">
-    <section class="panel" id="diary">
+    <section class="panel" id="compose">
         <div class="section-title">
-            <h2>生活日记</h2>
-            <span>给生活留一点安静的位置</span>
+            <h2>创建内容</h2>
+            <span>自动带日期时间，标签可填可不填</span>
         </div>
-        <div class="diary-list">
-            <article class="diary-card">
-                <div class="tagline">今日心情</div>
-                <h3>今天想记录什么？</h3>
-                <p>可以写一段生活片段、学习心得、遇到的人、完成的小事，或者只是当天的心情。</p>
-                <a href="#write-diary">马上写日记 →</a>
+        <div class="compose-grid">
+            <article class="compose-card">
+                <h3>写日记</h3>
+                <form id="diaryForm">
+                    <div class="field">
+                        <label for="diaryTitle">标题</label>
+                        <input id="diaryTitle" type="text" placeholder="例如：今天的小确幸">
+                    </div>
+                    <div class="field">
+                        <label for="diaryDate">日期时间</label>
+                        <input id="diaryDate" type="datetime-local">
+                    </div>
+                    <div class="field">
+                        <label for="diaryMood">心情</label>
+                        <input id="diaryMood" type="text" placeholder="例如：平静、开心、有点累">
+                    </div>
+                    <div class="field">
+                        <label for="diaryTags">标签</label>
+                        <input id="diaryTags" type="text" placeholder="例如：生活, 思考">
+                    </div>
+                    <div class="field">
+                        <label for="diaryContent">内容</label>
+                        <textarea id="diaryContent" placeholder="今天发生了什么？有什么想法值得留下？"></textarea>
+                    </div>
+                    <div class="actions">
+                        <button class="button green" type="submit">保存草稿</button>
+                        <a class="button secondary" id="createDiaryLink" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">发布到 GitHub</a>
+                    </div>
+                    <p class="form-note" id="diaryDraftStatus">还没有保存日记草稿。</p>
+                </form>
             </article>
-            <article class="diary-card">
-                <div class="tagline">日记模板</div>
-                <h3>一个简单的记录格式</h3>
-                <p>日期、天气、心情、今天发生了什么、我学到了什么、明天想做什么。</p>
-                <a href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/2026-06-19.md" target="_blank" rel="noopener">用模板创建 →</a>
+
+            <article class="compose-card">
+                <h3>写文章</h3>
+                <form id="postForm">
+                    <div class="field">
+                        <label for="postTitle">标题</label>
+                        <input id="postTitle" type="text" placeholder="例如：一次建站记录">
+                    </div>
+                    <div class="field">
+                        <label for="postDate">日期时间</label>
+                        <input id="postDate" type="datetime-local">
+                    </div>
+                    <div class="field">
+                        <label for="postTags">标签</label>
+                        <input id="postTags" type="text" placeholder="例如：建站, 学习">
+                    </div>
+                    <div class="field">
+                        <label for="postContent">内容</label>
+                        <textarea id="postContent" placeholder="写下文章正文。"></textarea>
+                    </div>
+                    <div class="actions">
+                        <button class="button" type="submit">保存草稿</button>
+                        <a class="button secondary" id="createPostLink" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">发布到 GitHub</a>
+                    </div>
+                    <p class="form-note" id="postDraftStatus">还没有保存文章草稿。</p>
+                </form>
             </article>
         </div>
     </section>
 
-    <section class="panel" id="write-diary">
+    <section class="panel" id="tags">
         <div class="section-title">
-            <h2>写日记</h2>
-            <span>先在这里写草稿，再发布到 GitHub</span>
+            <h2>标签检索</h2>
+            <span>点击标签后，日记和文章会一起筛选</span>
         </div>
-        <div class="diary-workspace">
-            <form class="diary-form" id="diaryForm">
-                <div class="field">
-                    <label for="diaryTitle">标题</label>
-                    <input id="diaryTitle" type="text" placeholder="例如：今天的小确幸">
-                </div>
-                <div class="field">
-                    <label for="diaryMood">心情</label>
-                    <input id="diaryMood" type="text" placeholder="例如：平静、开心、有点累">
-                </div>
-                <div class="field">
-                    <label for="diaryContent">内容</label>
-                    <textarea id="diaryContent" placeholder="今天发生了什么？有什么想法值得留下？"></textarea>
-                </div>
-                <div class="actions">
-                    <button class="button green" type="submit">保存草稿</button>
-                    <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">发布到 GitHub</a>
-                </div>
-            </form>
-            <aside class="diary-note">
-                <h3>小提示</h3>
-                <p>这里的“保存草稿”会把内容保存在你当前浏览器里，适合先临时记录。想让日记变成网站内容时，点击“发布到 GitHub”，把草稿复制进去提交即可。</p>
-                <div class="saved-diary" id="savedDiary">
-                    <h4>最近草稿</h4>
-                    <p>还没有保存草稿。</p>
-                </div>
-            </aside>
+        <div class="tag-filter" id="tagFilter">
+            <button class="tag-button active" type="button" data-tag="all">全部</button>
         </div>
     </section>
 
-    <section class="panel" id="tools">
+    <section class="panel" id="diaryTimeline">
         <div class="section-title">
-            <h2>写作快捷入口</h2>
-            <span>不用单独做登录页，直接使用 GitHub 的编辑能力</span>
+            <h2>日记时间线</h2>
+            <span>按发布时间倒序排列</span>
         </div>
-        <div class="quick-tools">
-            <article class="tool-card">
-                <h3>创建新文章</h3>
-                <p>打开 GitHub 的新建文件页，默认放到 posts 目录，可以直接写 Markdown。</p>
-                <a class="button" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=posts/new-article.md" target="_blank" rel="noopener">开始写</a>
-            </article>
-            <article class="tool-card">
-                <h3>创建日记</h3>
-                <p>打开 GitHub 的新建文件页，默认放到 diary 目录，方便按日期整理生活记录。</p>
-                <a class="button green" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=diary/new-diary.md" target="_blank" rel="noopener">写日记</a>
-            </article>
-            <article class="tool-card">
-                <h3>管理网站文件</h3>
-                <p>查看图片、文章、日记和页面文件，也可以上传新的背景图或素材。</p>
-                <a class="button secondary" href="https://github.com/wasdwry/wasdwry.github.io" target="_blank" rel="noopener">打开仓库</a>
-            </article>
+        <div class="timeline-grid" id="diaryList">
+            <div class="empty-state">正在读取日记……</div>
         </div>
     </section>
 
-    <section class="panel" id="posts">
+    <section class="panel" id="postTimeline">
         <div class="section-title">
-            <h2>最新文章</h2>
-            <span>文章和日记可以慢慢分开整理</span>
+            <h2>文章时间线</h2>
+            <span>标题自由拟定，排序仍按时间</span>
         </div>
-        <div class="posts">
-            <article class="post">
-                <div class="tagline">第一篇</div>
-                <h3>欢迎来到我的博客，使用 ChatGPT 生成。dpdns.org</h3>
-                <p>这是我的第一篇文章，我将在这里记录技术学习与生活感悟。</p>
-                <a href="#">阅读全文 →</a>
-            </article>
-            <article class="post">
-                <div class="tagline">建站记录</div>
-                <h3>Github Pages 建站体验</h3>
-                <p>使用 Github Pages 搭建个人网站非常方便，而且免费。</p>
-                <a href="#">阅读全文 →</a>
-            </article>
+        <div class="timeline-grid" id="postList">
+            <div class="empty-state">正在读取文章……</div>
         </div>
     </section>
 </main>
@@ -396,38 +402,292 @@ footer{
 </footer>
 
 <script>
-const form = document.getElementById("diaryForm");
-const titleInput = document.getElementById("diaryTitle");
-const moodInput = document.getElementById("diaryMood");
-const contentInput = document.getElementById("diaryContent");
-const savedDiary = document.getElementById("savedDiary");
+const repoOwner = "wasdwry";
+const repoName = "wasdwry.github.io";
+const branch = "main";
+const repoBase = `https://github.com/${repoOwner}/${repoName}`;
+const apiBase = `https://api.github.com/repos/${repoOwner}/${repoName}/contents`;
+const state = {
+    diary:[],
+    posts:[],
+    activeTag:"all"
+};
 
-function renderDraft(){
-    const draft = JSON.parse(localStorage.getItem("wasdwryDiaryDraft") || "null");
-    if(!draft){
-        savedDiary.innerHTML = "<h4>最近草稿</h4><p>还没有保存草稿。</p>";
-        return;
+const fields = {
+    diary:{
+        form:document.getElementById("diaryForm"),
+        title:document.getElementById("diaryTitle"),
+        date:document.getElementById("diaryDate"),
+        mood:document.getElementById("diaryMood"),
+        tags:document.getElementById("diaryTags"),
+        content:document.getElementById("diaryContent"),
+        link:document.getElementById("createDiaryLink"),
+        status:document.getElementById("diaryDraftStatus")
+    },
+    post:{
+        form:document.getElementById("postForm"),
+        title:document.getElementById("postTitle"),
+        date:document.getElementById("postDate"),
+        tags:document.getElementById("postTags"),
+        content:document.getElementById("postContent"),
+        link:document.getElementById("createPostLink"),
+        status:document.getElementById("postDraftStatus")
     }
-    savedDiary.innerHTML = `
-        <h4>${draft.title || "未命名日记"}</h4>
-        <p>心情：${draft.mood || "未填写"}</p>
-        <p>${draft.content || "还没有正文。"}</p>
-    `;
+};
+
+function pad(value){
+    return String(value).padStart(2,"0");
 }
 
-form.addEventListener("submit", function(event){
-    event.preventDefault();
+function toDateTimeInput(date){
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function toDisplayDate(value){
+    if(!value) return "";
+    return value.replace("T"," ");
+}
+
+function filenameDate(value){
+    return value.replace("T","-").replace(":","-");
+}
+
+function slugify(text, fallback){
+    const slug = text.toLowerCase()
+        .normalize("NFKD")
+        .replace(/[^\w\s-]/g,"")
+        .trim()
+        .replace(/[\s_]+/g,"-")
+        .replace(/-+/g,"-")
+        .slice(0,42);
+    return slug || fallback;
+}
+
+function parseTags(text){
+    return text.split(/[，,\s]+/)
+        .map(tag => tag.trim())
+        .filter(Boolean);
+}
+
+function escapeHtml(text){
+    return String(text).replace(/[&<>"']/g, char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        "\"":"&quot;",
+        "'":"&#39;"
+    }[char]));
+}
+
+function markdownTemplate(type){
+    const group = fields[type];
+    const title = group.title.value.trim() || (type === "diary" ? "未命名日记" : "未命名文章");
+    const date = toDisplayDate(group.date.value || toDateTimeInput(new Date()));
+    const tags = parseTags(group.tags.value).join(", ");
+    const body = group.content.value.trim() || "正文内容……";
+    const lines = [`# ${title}`,"",`日期：${date}`];
+
+    if(type === "diary"){
+        const mood = group.mood.value.trim();
+        if(mood) lines.push(`心情：${mood}`);
+    }
+    if(tags) lines.push(`标签：${tags}`);
+    lines.push("",body,"");
+    return lines.join("\n");
+}
+
+function newFileUrl(type){
+    const group = fields[type];
+    const date = group.date.value || toDateTimeInput(new Date());
+    const folder = type === "diary" ? "diary" : "posts";
+    const fallback = type === "diary" ? "new-diary" : "new-article";
+    const filename = `${folder}/${filenameDate(date)}-${slugify(group.title.value, fallback)}.md`;
+    const params = new URLSearchParams({
+        filename,
+        value:markdownTemplate(type)
+    });
+    return `${repoBase}/new/${branch}?${params.toString()}`;
+}
+
+function updateCreateLinks(){
+    fields.diary.link.href = newFileUrl("diary");
+    fields.post.link.href = newFileUrl("post");
+}
+
+function saveDraft(type){
+    const group = fields[type];
     const draft = {
-        title:titleInput.value.trim(),
-        mood:moodInput.value.trim(),
-        content:contentInput.value.trim(),
+        title:group.title.value.trim(),
+        date:group.date.value,
+        tags:group.tags.value.trim(),
+        content:group.content.value.trim(),
         savedAt:new Date().toISOString()
     };
-    localStorage.setItem("wasdwryDiaryDraft", JSON.stringify(draft));
-    renderDraft();
+    if(type === "diary") draft.mood = group.mood.value.trim();
+    localStorage.setItem(`wasdwry-${type}-draft`, JSON.stringify(draft));
+    group.status.textContent = `草稿已保存：${new Date().toLocaleString()}`;
+}
+
+function loadDraft(type){
+    const group = fields[type];
+    const draft = JSON.parse(localStorage.getItem(`wasdwry-${type}-draft`) || "null");
+    if(!draft) return;
+    group.title.value = draft.title || "";
+    group.date.value = draft.date || group.date.value;
+    group.tags.value = draft.tags || "";
+    group.content.value = draft.content || "";
+    if(type === "diary") group.mood.value = draft.mood || "";
+    group.status.textContent = `已载入最近草稿：${draft.savedAt ? new Date(draft.savedAt).toLocaleString() : ""}`;
+}
+
+function parseDateFromFilename(name){
+    const match = name.match(/(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/);
+    if(!match) return null;
+    return {
+        display:`${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`,
+        timestamp:new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:00`).getTime()
+    };
+}
+
+function parseDateFromText(markdown){
+    const match = markdown.match(/^日期[:：]\s*(.+)$/m);
+    if(!match) return null;
+    const value = match[1].trim();
+    return {
+        display:value,
+        timestamp:new Date(value.replace(" ","T")).getTime() || 0
+    };
+}
+
+function parseMarkdown(markdown, file, type){
+    const titleMatch = markdown.match(/^#\s+(.+)$/m);
+    const tagMatch = markdown.match(/^标签[:：]\s*(.+)$/m);
+    const moodMatch = markdown.match(/^心情[:：]\s*(.+)$/m);
+    const fileDate = parseDateFromFilename(file.name);
+    const textDate = parseDateFromText(markdown);
+    const date = fileDate || textDate || { display:"未标注时间", timestamp:0 };
+    const title = titleMatch ? titleMatch[1].trim() : file.name.replace(/\.md$/,"");
+    const tags = tagMatch ? parseTags(tagMatch[1]) : [];
+    const body = markdown.split("\n")
+        .filter(line => !/^#\s+/.test(line))
+        .filter(line => !/^(日期|心情|标签)[:：]/.test(line.trim()))
+        .join("\n")
+        .trim();
+    const excerpt = body.replace(/\s+/g," ").slice(0,90) || "还没有正文摘要。";
+    return {
+        type,
+        title,
+        tags,
+        mood:moodMatch ? moodMatch[1].trim() : "",
+        date:date.display,
+        timestamp:date.timestamp,
+        excerpt,
+        path:file.path,
+        name:file.name,
+        viewUrl:`${repoBase}/blob/${branch}/${file.path}`,
+        editUrl:`${repoBase}/edit/${branch}/${file.path}`,
+        deleteUrl:`${repoBase}/delete/${branch}/${file.path}`
+    };
+}
+
+async function loadFolder(folder,type){
+    try{
+        const response = await fetch(`${apiBase}/${folder}?ref=${branch}`);
+        if(response.status === 404) return [];
+        if(!response.ok) throw new Error(`HTTP ${response.status}`);
+        const files = await response.json();
+        const markdownFiles = files.filter(file => file.type === "file" && file.name.endsWith(".md"));
+        const items = await Promise.all(markdownFiles.map(async file => {
+            const raw = await fetch(file.download_url);
+            const markdown = raw.ok ? await raw.text() : "";
+            return parseMarkdown(markdown,file,type);
+        }));
+        return items.sort((a,b) => b.timestamp - a.timestamp);
+    }catch(error){
+        console.warn(`读取 ${folder} 失败`, error);
+        return null;
+    }
+}
+
+function visibleItems(items){
+    if(state.activeTag === "all") return items;
+    return items.filter(item => item.tags.includes(state.activeTag));
+}
+
+function renderList(id,items,emptyText,errorText){
+    const container = document.getElementById(id);
+    if(items === null){
+        container.innerHTML = `<div class="empty-state">${errorText}</div>`;
+        return;
+    }
+    const filtered = visibleItems(items);
+    if(filtered.length === 0){
+        container.innerHTML = `<div class="empty-state">${emptyText}</div>`;
+        return;
+    }
+    container.innerHTML = filtered.map(item => `
+        <article class="content-card">
+            <div class="meta">
+                <span>${escapeHtml(item.date)}</span>
+                ${item.mood ? `<span>心情：${escapeHtml(item.mood)}</span>` : ""}
+            </div>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p>${escapeHtml(item.excerpt)}</p>
+            ${item.tags.length ? `<div class="tags">${item.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+            <div class="item-actions">
+                <a class="button small" href="${item.viewUrl}" target="_blank" rel="noopener">查看</a>
+                <a class="button small secondary" href="${item.editUrl}" target="_blank" rel="noopener">编辑</a>
+                <a class="button small danger" href="${item.deleteUrl}" target="_blank" rel="noopener">删除</a>
+            </div>
+        </article>
+    `).join("");
+}
+
+function renderTags(){
+    const allTags = new Set([...state.diary,...state.posts].flatMap(item => item.tags));
+    const buttons = [`<button class="tag-button ${state.activeTag === "all" ? "active" : ""}" type="button" data-tag="all">全部</button>`];
+    [...allTags].sort((a,b) => a.localeCompare(b,"zh-CN")).forEach(tag => {
+        buttons.push(`<button class="tag-button ${state.activeTag === tag ? "active" : ""}" type="button" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`);
+    });
+    document.getElementById("tagFilter").innerHTML = buttons.join("");
+}
+
+function renderAll(){
+    renderTags();
+    renderList("diaryList",state.diary,"没有找到符合条件的日记。","读取日记失败，请稍后刷新。");
+    renderList("postList",state.posts,"没有找到符合条件的文章。","读取文章失败，请稍后刷新。");
+}
+
+async function loadPublishedContent(){
+    const [diary,posts] = await Promise.all([
+        loadFolder("diary","diary"),
+        loadFolder("posts","post")
+    ]);
+    state.diary = diary || [];
+    state.posts = posts || [];
+    renderAll();
+}
+
+document.getElementById("tagFilter").addEventListener("click", event => {
+    const button = event.target.closest("[data-tag]");
+    if(!button) return;
+    state.activeTag = button.dataset.tag;
+    renderAll();
 });
 
-renderDraft();
+Object.entries(fields).forEach(([type,group]) => {
+    group.date.value = toDateTimeInput(new Date());
+    loadDraft(type);
+    group.form.addEventListener("input", updateCreateLinks);
+    group.form.addEventListener("submit", event => {
+        event.preventDefault();
+        saveDraft(type);
+        updateCreateLinks();
+    });
+});
+
+updateCreateLinks();
+loadPublishedContent();
 </script>
 
 </body>

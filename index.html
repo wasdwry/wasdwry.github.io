@@ -184,6 +184,9 @@ input,textarea{
     background:white;
     outline:none;
 }
+.search-box{
+    margin:0 0 16px;
+}
 textarea{
     min-height:180px;
     resize:vertical;
@@ -322,8 +325,8 @@ footer{
                         <input id="diaryMood" type="text" placeholder="例如：平静、开心、有点累">
                     </div>
                     <div class="field">
-                        <label for="diaryTags">标签</label>
-                        <input id="diaryTags" type="text" placeholder="例如：生活, 思考">
+                        <label for="diaryTags">标签，可填写一个或多个</label>
+                        <input id="diaryTags" type="text" placeholder="例如：生活, 思考, 学习">
                     </div>
                     <div class="field">
                         <label for="diaryContent">内容</label>
@@ -350,8 +353,8 @@ footer{
                         <input id="postDate" type="datetime-local">
                     </div>
                     <div class="field">
-                        <label for="postTags">标签</label>
-                        <input id="postTags" type="text" placeholder="例如：建站, 学习">
+                        <label for="postTags">标签，可填写一个或多个</label>
+                        <input id="postTags" type="text" placeholder="例如：建站, 学习, 思考">
                     </div>
                     <div class="field">
                         <label for="postContent">内容</label>
@@ -371,7 +374,11 @@ footer{
     <section class="panel" id="tags">
         <div class="section-title">
             <h2>标签检索</h2>
-            <span>点击标签后，日记和文章会一起筛选</span>
+            <span>可选择多个标签，也可搜索标题或正文</span>
+        </div>
+        <div class="search-box">
+            <label for="contentSearch">内容查找</label>
+            <input id="contentSearch" type="search" placeholder="搜索标题或正文...">
         </div>
         <div class="tag-filter" id="tagFilter">
             <button class="tag-button active" type="button" data-tag="all">全部</button>
@@ -412,8 +419,10 @@ const apiBase = `https://api.github.com/repos/${repoOwner}/${repoName}/contents`
 const state = {
     diary:[],
     posts:[],
-    activeTag:"all"
+    selectedTags:new Set(),
+    searchQuery:""
 };
+const contentSearch = document.getElementById("contentSearch");
 
 const fields = {
     diary:{
@@ -602,6 +611,7 @@ function parseMarkdown(markdown, file, type){
         mood:moodMatch ? moodMatch[1].trim() : "",
         date:date.display,
         timestamp:date.timestamp,
+        body,
         excerpt,
         path:file.path,
         name:file.name,
@@ -631,8 +641,14 @@ async function loadFolder(folder,type){
 }
 
 function visibleItems(items){
-    if(state.activeTag === "all") return items;
-    return items.filter(item => item.tags.includes(state.activeTag));
+    const query = state.searchQuery.trim().toLowerCase();
+    return items.filter(item => {
+        const matchesTags = state.selectedTags.size === 0 ||
+            item.tags.some(tag => state.selectedTags.has(tag));
+        const searchText = `${item.title}\n${item.body}`.toLowerCase();
+        const matchesSearch = !query || searchText.includes(query);
+        return matchesTags && matchesSearch;
+    });
 }
 
 function renderList(id,items,emptyText,errorText){
@@ -666,9 +682,9 @@ function renderList(id,items,emptyText,errorText){
 
 function renderTags(){
     const allTags = new Set([...state.diary,...state.posts].flatMap(item => item.tags));
-    const buttons = [`<button class="tag-button ${state.activeTag === "all" ? "active" : ""}" type="button" data-tag="all">全部</button>`];
+    const buttons = [`<button class="tag-button ${state.selectedTags.size === 0 ? "active" : ""}" type="button" data-tag="all">全部</button>`];
     [...allTags].sort((a,b) => a.localeCompare(b,"zh-CN")).forEach(tag => {
-        buttons.push(`<button class="tag-button ${state.activeTag === tag ? "active" : ""}" type="button" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`);
+        buttons.push(`<button class="tag-button ${state.selectedTags.has(tag) ? "active" : ""}" type="button" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`);
     });
     document.getElementById("tagFilter").innerHTML = buttons.join("");
 }
@@ -692,7 +708,19 @@ async function loadPublishedContent(){
 document.getElementById("tagFilter").addEventListener("click", event => {
     const button = event.target.closest("[data-tag]");
     if(!button) return;
-    state.activeTag = button.dataset.tag;
+    const tag = button.dataset.tag;
+    if(tag === "all"){
+        state.selectedTags.clear();
+    }else if(state.selectedTags.has(tag)){
+        state.selectedTags.delete(tag);
+    }else{
+        state.selectedTags.add(tag);
+    }
+    renderAll();
+});
+
+contentSearch.addEventListener("input", event => {
+    state.searchQuery = event.target.value;
     renderAll();
 });
 

@@ -19,7 +19,7 @@
 body{
     margin:0;
     font-family:Arial,"Microsoft YaHei",sans-serif;
-    background:#eef4f8 url("https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1800&q=80") center top/cover fixed no-repeat;
+    background:#eef4f8 url("assets/pixel-beach-bg.png") center top/cover fixed no-repeat;
     color:var(--text);
 }
 body::before{
@@ -122,6 +122,24 @@ nav a{
     min-height:34px;
     padding:0 12px;
     font-size:14px;
+}
+.top-button{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:20;
+    min-width:52px;
+    min-height:42px;
+    padding:0 12px;
+    border-radius:8px;
+    background:#16324d;
+    color:white;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    box-shadow:0 10px 24px rgba(31,41,51,0.2);
 }
 .container{
     margin-top:-54px;
@@ -247,6 +265,29 @@ textarea{
     font-size:13px;
     font-weight:700;
 }
+.timestamp-list{
+    display:grid;
+    gap:8px;
+    padding:12px;
+    border:1px solid rgba(23,105,170,0.14);
+    border-radius:8px;
+    background:#f6fbff;
+}
+.timestamp-item{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:10px;
+    align-items:start;
+}
+.timestamp-item a{
+    color:var(--primary);
+    font-weight:700;
+    text-decoration:none;
+}
+.timestamp-item span{
+    color:var(--muted);
+    line-height:1.6;
+}
 .empty-state{
     padding:18px;
     border:1px dashed rgba(96,112,132,0.45);
@@ -286,14 +327,14 @@ footer{
         <div class="logo">wasdwry.github.io</div>
         <nav>
             <a href="index.html">首页</a>
-            <a href="index.html#diaryTimeline">日记</a>
-            <a href="index.html#postTimeline">文章</a>
+            <a href="diary.html">日记</a>
+            <a href="posts.html">文章</a>
             <a href="favorites.html">收藏</a>
             <a href="https://github.com/wasdwry/wasdwry.github.io" target="_blank" rel="noopener">GitHub</a>
         </nav>
     </div>
 
-    <div class="hero">
+    <div class="hero" id="top">
         <h1>Favorites</h1>
         <p>收藏网页链接、工具、资料和灵感。每个收藏都可以带多个标签，也可以写一段可选描述，方便以后按主题和关键词找回来。</p>
         <div class="actions">
@@ -330,6 +371,10 @@ footer{
                 <div class="field">
                     <label for="favoriteDescription">描述</label>
                     <textarea id="favoriteDescription" placeholder="这个网页为什么值得收藏？描述可不填。"></textarea>
+                </div>
+                <div class="field">
+                    <label for="favoriteTimestamps">时间戳笔记</label>
+                    <textarea id="favoriteTimestamps" placeholder="适合视频收藏。每行一个时间点，例如：&#10;00:01:23 - 这里讲到关键概念&#10;12:05 - 想回看的片段"></textarea>
                 </div>
                 <div class="actions">
                     <button class="button green" type="submit">保存草稿</button>
@@ -370,6 +415,8 @@ footer{
 © 2026 wasdwry
 </footer>
 
+<a class="top-button" href="#top">Top</a>
+
 <script>
 const repoOwner = "wasdwry";
 const repoName = "wasdwry.github.io";
@@ -387,6 +434,7 @@ const urlInput = document.getElementById("favoriteUrl");
 const dateInput = document.getElementById("favoriteDate");
 const tagsInput = document.getElementById("favoriteTags");
 const descriptionInput = document.getElementById("favoriteDescription");
+const timestampsInput = document.getElementById("favoriteTimestamps");
 const createLink = document.getElementById("createFavoriteLink");
 const copyButton = document.getElementById("copyFavoriteMarkdown");
 const statusText = document.getElementById("favoriteDraftStatus");
@@ -442,10 +490,12 @@ function favoriteMarkdown(){
     const date = toDisplayDate(dateInput.value || toDateTimeInput(new Date()));
     const tags = parseTags(tagsInput.value).join(", ");
     const description = descriptionInput.value.trim();
+    const timestamps = timestampsInput.value.trim();
     const lines = [`# ${title}`,"",`链接：${url}`,`日期：${date}`];
     if(tags) lines.push(`标签：${tags}`);
     lines.push("");
     if(description) lines.push(description,"");
+    if(timestamps) lines.push("时间戳：",timestamps,"");
     return lines.join("\n");
 }
 
@@ -467,6 +517,7 @@ function saveDraft(){
         date:dateInput.value,
         tags:tagsInput.value.trim(),
         description:descriptionInput.value.trim(),
+        timestamps:timestampsInput.value.trim(),
         savedAt:new Date().toISOString()
     };
     localStorage.setItem("wasdwry-favorite-draft", JSON.stringify(draft));
@@ -500,6 +551,7 @@ function loadDraft(){
     dateInput.value = draft.date || dateInput.value;
     tagsInput.value = draft.tags || "";
     descriptionInput.value = draft.description || "";
+    timestampsInput.value = draft.timestamps || "";
     statusText.textContent = `已载入最近草稿：${draft.savedAt ? new Date(draft.savedAt).toLocaleString() : ""}`;
 }
 
@@ -532,16 +584,21 @@ function parseFavorite(markdown, file){
     const title = titleMatch ? titleMatch[1].trim() : file.name.replace(/\.md$/,"");
     const url = urlMatch ? urlMatch[1].trim() : "";
     const tags = tagMatch ? parseTags(tagMatch[1]) : [];
+    const timestampBlock = markdown.match(/^时间戳[:：]\s*\n([\s\S]*)$/m);
     const description = markdown.split("\n")
         .filter(line => !/^#\s+/.test(line))
         .filter(line => !/^(链接|日期|标签)[:：]/.test(line.trim()))
         .join("\n")
+        .split(/^时间戳[:：]\s*$/m)[0]
         .trim();
+    const timestampText = timestampBlock ? timestampBlock[1].trim() : "";
+    const timestamps = parseTimestampNotes(timestampText);
     return {
         title,
         url,
         tags,
         description,
+        timestamps,
         date:date.display,
         timestamp:date.timestamp,
         path:file.path,
@@ -549,6 +606,56 @@ function parseFavorite(markdown, file){
         editUrl:`${repoBase}/edit/${branch}/${file.path}`,
         deleteUrl:`${repoBase}/delete/${branch}/${file.path}`
     };
+}
+
+function parseTimestampNotes(text){
+    return text.split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+            const match = line.match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-—:：]\s*(.*)$/);
+            if(!match) return { time:"", note:line, seconds:0 };
+            return {
+                time:match[1],
+                note:match[2].trim(),
+                seconds:timestampToSeconds(match[1])
+            };
+        });
+}
+
+function timestampToSeconds(value){
+    const parts = value.split(":").map(Number);
+    if(parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+}
+
+function timestampUrl(url, seconds){
+    if(!url || !seconds) return url;
+    try{
+        const parsed = new URL(url);
+        if(parsed.hostname.includes("youtube.com") || parsed.hostname.includes("youtu.be")){
+            parsed.searchParams.set("t", `${seconds}s`);
+            return parsed.toString();
+        }
+        if(parsed.hostname.includes("bilibili.com")){
+            parsed.searchParams.set("t", seconds);
+            return parsed.toString();
+        }
+        parsed.hash = `t=${seconds}`;
+        return parsed.toString();
+    }catch(error){
+        return url;
+    }
+}
+
+function renderTimestampNotes(item){
+    if(!item.timestamps.length) return "";
+    return `<div class="timestamp-list">${item.timestamps.map(stamp => `
+        <div class="timestamp-item">
+            ${stamp.time ? `<a href="${escapeHtml(timestampUrl(item.url,stamp.seconds))}" target="_blank" rel="noopener">${escapeHtml(stamp.time)}</a>` : "<span>笔记</span>"}
+            <span>${escapeHtml(stamp.note || "未填写笔记。")}</span>
+        </div>
+    `).join("")}</div>`;
 }
 
 async function loadFavorites(){
@@ -580,7 +687,7 @@ function visibleFavorites(){
     return state.favorites.filter(item => {
         const matchesTags = state.selectedTags.size === 0 ||
             item.tags.some(tag => state.selectedTags.has(tag));
-        const searchText = `${item.title}\n${item.url}\n${item.description}`.toLowerCase();
+        const searchText = `${item.title}\n${item.url}\n${item.description}\n${item.timestamps.map(stamp => stamp.note).join("\n")}`.toLowerCase();
         const matchesSearch = !query || searchText.includes(query);
         return matchesTags && matchesSearch;
     });
@@ -608,6 +715,7 @@ function renderFavorites(){
             <h3>${escapeHtml(item.title)}</h3>
             ${item.url ? `<a class="favorite-url" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.url)}</a>` : ""}
             ${item.description ? `<p>${escapeHtml(item.description)}</p>` : `<p>暂无描述。</p>`}
+            ${renderTimestampNotes(item)}
             ${item.tags.length ? `<div class="tags">${item.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
             <div class="item-actions">
                 ${item.url ? `<a class="button small green" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">打开</a>` : ""}

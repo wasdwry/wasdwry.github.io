@@ -19,7 +19,7 @@
 body{
     margin:0;
     font-family:Arial,"Microsoft YaHei",sans-serif;
-    background:#eef4f8 url("https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1800&q=80") center top/cover fixed no-repeat;
+    background:#eef4f8 url("assets/pixel-beach-bg.png") center top/cover fixed no-repeat;
     color:var(--text);
 }
 body::before{
@@ -122,6 +122,24 @@ nav a{
     min-height:34px;
     padding:0 12px;
     font-size:14px;
+}
+.top-button{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:20;
+    min-width:52px;
+    min-height:42px;
+    padding:0 12px;
+    border-radius:8px;
+    background:#16324d;
+    color:white;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    box-shadow:0 10px 24px rgba(31,41,51,0.2);
 }
 .container{
     margin-top:-54px;
@@ -284,8 +302,8 @@ footer{
         <nav>
             <a href="#top">首页</a>
             <a href="#compose">写作</a>
-            <a href="#diaryTimeline">日记</a>
-            <a href="#postTimeline">文章</a>
+            <a href="diary.html">日记</a>
+            <a href="posts.html">文章</a>
             <a href="#tags">标签</a>
             <a href="favorites.html">收藏</a>
             <a href="https://github.com/wasdwry/wasdwry.github.io" target="_blank" rel="noopener">GitHub</a>
@@ -296,8 +314,8 @@ footer{
         <h1>Blog & Diary</h1>
         <p>记录技术学习、生活感悟和每天值得留下的片刻。标题由你自己写，排序交给时间；标签可有可无，但它们会让回看变得更容易。</p>
         <div class="actions">
-            <a class="button green" href="#compose">写日记</a>
-            <a class="button" href="#compose">写文章</a>
+            <a class="button green" href="diary.html#compose">写日记</a>
+            <a class="button" href="posts.html#compose">写文章</a>
             <a class="button secondary" href="#tags">按标签检索</a>
         </div>
     </div>
@@ -410,6 +428,8 @@ footer{
 <footer>
 © 2026 wasdwry
 </footer>
+
+<a class="top-button" href="#top">Top</a>
 
 <script>
 const repoOwner = "wasdwry";

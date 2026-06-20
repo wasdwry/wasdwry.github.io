@@ -202,6 +202,16 @@ textarea{
     resize:vertical;
     line-height:1.7;
 }
+.url-row,.tag-add-row,.timestamp-control-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+}
+.url-row input,.tag-add-row input,.timestamp-control-row input{
+    flex:1;
+    min-width:220px;
+}
 .form-note{
     margin:12px 0 0;
     line-height:1.7;
@@ -223,6 +233,53 @@ textarea{
     background:#16324d;
     color:white;
     border-color:#16324d;
+}
+.tag-picker{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:8px;
+}
+.tag-button.empty{
+    color:var(--muted);
+    cursor:default;
+}
+.video-preview{
+    margin:0 0 14px;
+    padding:14px;
+    border:1px solid rgba(23,105,170,0.14);
+    border-radius:8px;
+    background:#f6fbff;
+}
+.video-frame{
+    width:100%;
+    aspect-ratio:16 / 9;
+    border-radius:8px;
+    background:#102033;
+    overflow:hidden;
+}
+.video-frame iframe{
+    width:100%;
+    height:100%;
+    border:0;
+}
+.timestamp-cards{
+    display:grid;
+    gap:10px;
+    margin-bottom:14px;
+}
+.timestamp-card{
+    display:grid;
+    grid-template-columns:120px 1fr auto;
+    gap:10px;
+    align-items:center;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fbfdff;
+}
+.timestamp-card input{
+    min-width:0;
 }
 .favorites-grid{
     display:grid;
@@ -317,6 +374,9 @@ footer{
     .favorites-grid{
         grid-template-columns:1fr;
     }
+    .timestamp-card{
+        grid-template-columns:1fr;
+    }
 }
 </style>
 </head>
@@ -358,24 +418,41 @@ footer{
                 </div>
                 <div class="field">
                     <label for="favoriteUrl">网页链接</label>
-                    <input id="favoriteUrl" type="url" placeholder="https://example.com">
+                    <div class="url-row">
+                        <input id="favoriteUrl" type="url" placeholder="https://example.com">
+                        <button class="button secondary" id="parseFavoriteUrl" type="button">解析链接</button>
+                    </div>
                 </div>
                 <div class="field">
                     <label for="favoriteDate">收藏日期</label>
                     <input id="favoriteDate" type="datetime-local">
                 </div>
                 <div class="field">
-                    <label for="favoriteTags">标签，可填写一个或多个</label>
-                    <input id="favoriteTags" type="text" placeholder="例如：工具, 学习, 前端">
+                    <label for="newFavoriteTag">标签按钮</label>
+                    <div class="tag-add-row">
+                        <input id="newFavoriteTag" type="text" placeholder="一次添加一个标签，例如：工具">
+                        <button class="button secondary" id="addFavoriteTag" type="button">添加标签</button>
+                    </div>
+                    <div class="tag-picker" id="favoriteTagPicker">
+                        <button class="tag-button empty" type="button" disabled>暂无标签</button>
+                    </div>
                 </div>
                 <div class="field">
                     <label for="favoriteDescription">描述</label>
                     <textarea id="favoriteDescription" placeholder="这个网页为什么值得收藏？描述可不填。"></textarea>
                 </div>
-                <div class="field">
-                    <label for="favoriteTimestamps">时间戳笔记</label>
-                    <textarea id="favoriteTimestamps" placeholder="适合视频收藏。每行一个时间点，例如：&#10;00:01:23 - 这里讲到关键概念&#10;12:05 - 想回看的片段"></textarea>
+                <div class="video-preview" id="videoPreview">
+                    <p class="form-note">输入 YouTube、Bilibili 或 Vimeo 链接后，可以解析为视频预览；普通网页仍可作为收藏保存。</p>
                 </div>
+                <div class="field">
+                    <label for="currentVideoTime">时间戳笔记</label>
+                    <div class="timestamp-control-row">
+                        <input id="currentVideoTime" type="text" placeholder="当前时间，例如：00:01:23">
+                        <button class="button secondary" id="recordTimestamp" type="button">记录当前时间点</button>
+                    </div>
+                </div>
+                <div class="timestamp-cards" id="timestampCards"></div>
+                <textarea id="favoriteTimestamps" hidden></textarea>
                 <div class="actions">
                     <button class="button green" type="submit">保存草稿</button>
                     <button class="button secondary" id="copyFavoriteMarkdown" type="button">复制收藏 Markdown</button>
@@ -427,19 +504,30 @@ const apiBase = `https://api.github.com/repos/${repoOwner}/${repoName}/contents`
 const state = {
     favorites:[],
     selectedTags:new Set(),
+    selectedDraftTags:new Set(),
+    tagLibrary:new Set(),
+    timestampNotes:[],
     searchQuery:""
 };
 const form = document.getElementById("favoriteForm");
 const titleInput = document.getElementById("favoriteTitle");
 const urlInput = document.getElementById("favoriteUrl");
 const dateInput = document.getElementById("favoriteDate");
-const tagsInput = document.getElementById("favoriteTags");
+const newTagInput = document.getElementById("newFavoriteTag");
+const addTagButton = document.getElementById("addFavoriteTag");
+const tagPicker = document.getElementById("favoriteTagPicker");
 const descriptionInput = document.getElementById("favoriteDescription");
 const timestampsInput = document.getElementById("favoriteTimestamps");
+const parseUrlButton = document.getElementById("parseFavoriteUrl");
+const videoPreview = document.getElementById("videoPreview");
+const currentTimeInput = document.getElementById("currentVideoTime");
+const recordTimestampButton = document.getElementById("recordTimestamp");
+const timestampCards = document.getElementById("timestampCards");
 const createLink = document.getElementById("createFavoriteLink");
 const copyButton = document.getElementById("copyFavoriteMarkdown");
 const statusText = document.getElementById("favoriteDraftStatus");
 const favoriteSearch = document.getElementById("favoriteSearch");
+const tagLibraryKey = "wasdwry-favorite-tag-library";
 
 function pad(value){
     return String(value).padStart(2,"0");
@@ -475,6 +563,24 @@ function parseTags(text){
         .filter(Boolean);
 }
 
+function loadTagLibrary(){
+    const savedTags = JSON.parse(localStorage.getItem(tagLibraryKey) || "[]");
+    state.tagLibrary = new Set(savedTags.filter(Boolean));
+}
+
+function saveTagLibrary(){
+    localStorage.setItem(tagLibraryKey, JSON.stringify([...state.tagLibrary].sort((a,b) => a.localeCompare(b,"zh-CN"))));
+}
+
+function addDraftTag(tag){
+    const cleanTag = tag.trim();
+    if(!cleanTag) return;
+    state.tagLibrary.add(cleanTag);
+    state.selectedDraftTags.add(cleanTag);
+    saveTagLibrary();
+    renderFavoriteTagPicker();
+}
+
 function escapeHtml(text){
     return String(text).replace(/[&<>"']/g, char => ({
         "&":"&amp;",
@@ -489,15 +595,149 @@ function favoriteMarkdown(){
     const title = titleInput.value.trim() || "未命名收藏";
     const url = urlInput.value.trim() || "https://example.com";
     const date = toDisplayDate(dateInput.value || toDateTimeInput(new Date()));
-    const tags = parseTags(tagsInput.value).join(", ");
+    const tags = [...state.selectedDraftTags].join(", ");
     const description = descriptionInput.value.trim();
-    const timestamps = timestampsInput.value.trim();
+    const timestamps = timestampNotesToText();
     const lines = [`# ${title}`,"",`链接：${url}`,`日期：${date}`];
     if(tags) lines.push(`标签：${tags}`);
     lines.push("");
     if(description) lines.push(description,"");
     if(timestamps) lines.push("时间戳：",timestamps,"");
     return lines.join("\n");
+}
+
+function timestampNotesToText(){
+    return state.timestampNotes
+        .map(stamp => {
+            const time = (stamp.time || "").trim();
+            const note = (stamp.note || "").trim();
+            if(!time && !note) return "";
+            if(time && note) return `${time} - ${note}`;
+            return time || note;
+        })
+        .filter(Boolean)
+        .join("\n");
+}
+
+function syncTimestampTextarea(){
+    timestampsInput.value = timestampNotesToText();
+}
+
+function secondsToTimestamp(seconds){
+    const safeSeconds = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const rest = Math.floor(safeSeconds % 60);
+    return hours > 0 ? `${pad(hours)}:${pad(minutes)}:${pad(rest)}` : `${pad(minutes)}:${pad(rest)}`;
+}
+
+function parseFlexibleTime(value){
+    const text = String(value || "").trim().toLowerCase();
+    if(!text) return 0;
+    if(/^\d+$/.test(text)) return Number(text);
+    const clock = text.match(/^(\d{1,2}:)?\d{1,2}:\d{2}$/);
+    if(clock) return timestampToSeconds(text);
+    const parts = {
+        h:Number((text.match(/(\d+)\s*h/) || [0,0])[1]),
+        m:Number((text.match(/(\d+)\s*m/) || [0,0])[1]),
+        s:Number((text.match(/(\d+)\s*s/) || [0,0])[1])
+    };
+    return parts.h * 3600 + parts.m * 60 + parts.s;
+}
+
+function parseVideoUrl(rawUrl){
+    if(!rawUrl) return null;
+    try{
+        const parsed = new URL(rawUrl);
+        const host = parsed.hostname.replace(/^www\./,"");
+        const start = parseFlexibleTime(parsed.searchParams.get("t") || parsed.searchParams.get("start") || parsed.hash.replace(/^#t=/,""));
+        if(host.includes("youtube.com")){
+            let id = parsed.searchParams.get("v");
+            if(!id && parsed.pathname.startsWith("/shorts/")) id = parsed.pathname.split("/")[2];
+            if(!id && parsed.pathname.startsWith("/embed/")) id = parsed.pathname.split("/")[2];
+            if(id) return {
+                platform:"YouTube",
+                seconds:start,
+                embedUrl:`https://www.youtube.com/embed/${encodeURIComponent(id)}${start ? `?start=${start}` : ""}`
+            };
+        }
+        if(host === "youtu.be"){
+            const id = parsed.pathname.split("/").filter(Boolean)[0];
+            if(id) return {
+                platform:"YouTube",
+                seconds:start,
+                embedUrl:`https://www.youtube.com/embed/${encodeURIComponent(id)}${start ? `?start=${start}` : ""}`
+            };
+        }
+        if(host.includes("bilibili.com")){
+            const match = parsed.pathname.match(/\/video\/(BV[\w]+|av\d+)/i);
+            if(match){
+                const videoId = match[1];
+                const query = videoId.toLowerCase().startsWith("av") ? `aid=${encodeURIComponent(videoId.slice(2))}` : `bvid=${encodeURIComponent(videoId)}`;
+                return {
+                    platform:"Bilibili",
+                    seconds:start,
+                    embedUrl:`https://player.bilibili.com/player.html?${query}${start ? `&t=${start}` : ""}`
+                };
+            }
+        }
+        if(host.includes("vimeo.com")){
+            const id = parsed.pathname.split("/").filter(part => /^\d+$/.test(part)).pop();
+            if(id) return {
+                platform:"Vimeo",
+                seconds:start,
+                embedUrl:`https://player.vimeo.com/video/${id}${start ? `#t=${start}s` : ""}`
+            };
+        }
+    }catch(error){
+        return null;
+    }
+    return null;
+}
+
+function renderVideoPreview(){
+    const video = parseVideoUrl(urlInput.value.trim());
+    if(!urlInput.value.trim()){
+        videoPreview.innerHTML = `<p class="form-note">输入 YouTube、Bilibili 或 Vimeo 链接后，可以解析为视频预览；普通网页仍可作为收藏保存。</p>`;
+        return;
+    }
+    if(!video){
+        videoPreview.innerHTML = `<p class="form-note">当前链接暂不支持嵌入预览，但仍可作为普通收藏保存。</p>`;
+        return;
+    }
+    if(video.seconds && !currentTimeInput.value.trim()){
+        currentTimeInput.value = secondsToTimestamp(video.seconds);
+    }
+    videoPreview.innerHTML = `
+        <div class="video-frame">
+            <iframe src="${escapeHtml(video.embedUrl)}" title="${escapeHtml(video.platform)} 视频预览" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+        <p class="form-note">${escapeHtml(video.platform)} 预览已生成。若浏览器无法读取播放进度，请在“当前时间”里手动填写时间点后记录。</p>
+    `;
+}
+
+function renderTimestampCards(){
+    syncTimestampTextarea();
+    if(state.timestampNotes.length === 0){
+        timestampCards.innerHTML = `<div class="empty-state">还没有时间戳笔记。播放或定位到某一段后，填写当前时间并点击记录。</div>`;
+        return;
+    }
+    timestampCards.innerHTML = state.timestampNotes.map((stamp,index) => `
+        <div class="timestamp-card" data-index="${index}">
+            <input type="text" value="${escapeHtml(stamp.time || "")}" data-role="time" aria-label="时间点">
+            <input type="text" value="${escapeHtml(stamp.note || "")}" data-role="note" aria-label="时间点笔记" placeholder="为这一段写一点笔记">
+            <button class="button small danger" type="button" data-role="delete">删除</button>
+        </div>
+    `).join("");
+}
+
+function recordTimestamp(){
+    const video = parseVideoUrl(urlInput.value.trim());
+    const seconds = parseFlexibleTime(currentTimeInput.value) || (video ? video.seconds : 0);
+    const time = currentTimeInput.value.trim() || secondsToTimestamp(seconds);
+    state.timestampNotes.push({ time, note:"", seconds });
+    renderTimestampCards();
+    statusText.textContent = "已记录时间点，可以在卡片里补充笔记。";
 }
 
 function newFavoriteUrl(){
@@ -516,9 +756,9 @@ function saveDraft(){
         title:titleInput.value.trim(),
         url:urlInput.value.trim(),
         date:dateInput.value,
-        tags:tagsInput.value.trim(),
+        tags:[...state.selectedDraftTags],
         description:descriptionInput.value.trim(),
-        timestamps:timestampsInput.value.trim(),
+        timestamps:state.timestampNotes,
         savedAt:new Date().toISOString()
     };
     localStorage.setItem("wasdwry-favorite-draft", JSON.stringify(draft));
@@ -550,9 +790,13 @@ function loadDraft(){
     titleInput.value = draft.title || "";
     urlInput.value = draft.url || "";
     dateInput.value = draft.date || dateInput.value;
-    tagsInput.value = draft.tags || "";
+    state.selectedDraftTags = new Set(Array.isArray(draft.tags) ? draft.tags : parseTags(draft.tags || ""));
+    state.selectedDraftTags.forEach(tag => state.tagLibrary.add(tag));
     descriptionInput.value = draft.description || "";
-    timestampsInput.value = draft.timestamps || "";
+    state.timestampNotes = Array.isArray(draft.timestamps) ? draft.timestamps : parseTimestampNotes(draft.timestamps || "");
+    renderFavoriteTagPicker();
+    renderTimestampCards();
+    renderVideoPreview();
     statusText.textContent = `已载入最近草稿：${draft.savedAt ? new Date(draft.savedAt).toLocaleString() : ""}`;
 }
 
@@ -614,11 +858,11 @@ function parseTimestampNotes(text){
         .map(line => line.trim())
         .filter(Boolean)
         .map(line => {
-            const match = line.match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-—:：]\s*(.*)$/);
+            const match = line.match(/^(\d{1,2}:\d{2}(?::\d{2})?)(?:\s*[-—:：]\s*(.*))?$/);
             if(!match) return { time:"", note:line, seconds:0 };
             return {
                 time:match[1],
-                note:match[2].trim(),
+                note:(match[2] || "").trim(),
                 seconds:timestampToSeconds(match[1])
             };
         });
@@ -640,6 +884,10 @@ function timestampUrl(url, seconds){
         }
         if(parsed.hostname.includes("bilibili.com")){
             parsed.searchParams.set("t", seconds);
+            return parsed.toString();
+        }
+        if(parsed.hostname.includes("vimeo.com")){
+            parsed.hash = `t=${seconds}s`;
             return parsed.toString();
         }
         parsed.hash = `t=${seconds}`;
@@ -676,6 +924,8 @@ async function loadFavorites(){
             return parseFavorite(markdown,file);
         }));
         state.favorites = items.sort((a,b) => b.timestamp - a.timestamp);
+        state.favorites.flatMap(item => item.tags).forEach(tag => state.tagLibrary.add(tag));
+        saveTagLibrary();
         renderAll();
     }catch(error){
         console.warn("读取收藏失败", error);
@@ -701,6 +951,17 @@ function renderTags(){
         buttons.push(`<button class="tag-button ${state.selectedTags.has(tag) ? "active" : ""}" type="button" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`);
     });
     document.getElementById("tagFilter").innerHTML = buttons.join("");
+}
+
+function renderFavoriteTagPicker(){
+    const tags = [...state.tagLibrary].sort((a,b) => a.localeCompare(b,"zh-CN"));
+    if(tags.length === 0){
+        tagPicker.innerHTML = `<button class="tag-button empty" type="button" disabled>暂无标签</button>`;
+        return;
+    }
+    tagPicker.innerHTML = tags.map(tag => `
+        <button class="tag-button ${state.selectedDraftTags.has(tag) ? "active" : ""}" type="button" data-draft-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>
+    `).join("");
 }
 
 function renderFavorites(){
@@ -730,6 +991,7 @@ function renderFavorites(){
 
 function renderAll(){
     renderTags();
+    renderFavoriteTagPicker();
     renderFavorites();
 }
 
@@ -752,6 +1014,62 @@ favoriteSearch.addEventListener("input", event => {
     renderAll();
 });
 
+tagPicker.addEventListener("click", event => {
+    const button = event.target.closest("[data-draft-tag]");
+    if(!button) return;
+    const tag = button.dataset.draftTag;
+    if(state.selectedDraftTags.has(tag)){
+        state.selectedDraftTags.delete(tag);
+    }else{
+        state.selectedDraftTags.add(tag);
+    }
+    renderFavoriteTagPicker();
+});
+
+addTagButton.addEventListener("click", () => {
+    parseTags(newTagInput.value).forEach(addDraftTag);
+    newTagInput.value = "";
+});
+
+newTagInput.addEventListener("keydown", event => {
+    if(event.key !== "Enter") return;
+    event.preventDefault();
+    parseTags(newTagInput.value).forEach(addDraftTag);
+    newTagInput.value = "";
+});
+
+parseUrlButton.addEventListener("click", () => {
+    renderVideoPreview();
+});
+
+urlInput.addEventListener("change", () => {
+    renderVideoPreview();
+});
+
+recordTimestampButton.addEventListener("click", recordTimestamp);
+
+timestampCards.addEventListener("input", event => {
+    const card = event.target.closest("[data-index]");
+    if(!card) return;
+    const index = Number(card.dataset.index);
+    const role = event.target.dataset.role;
+    if(!state.timestampNotes[index] || !role) return;
+    state.timestampNotes[index][role] = event.target.value;
+    if(role === "time"){
+        state.timestampNotes[index].seconds = parseFlexibleTime(event.target.value);
+    }
+    syncTimestampTextarea();
+});
+
+timestampCards.addEventListener("click", event => {
+    const button = event.target.closest("[data-role='delete']");
+    if(!button) return;
+    const card = button.closest("[data-index]");
+    const index = Number(card.dataset.index);
+    state.timestampNotes.splice(index,1);
+    renderTimestampCards();
+});
+
 form.addEventListener("input", updateCreateLink);
 form.addEventListener("submit", event => {
     event.preventDefault();
@@ -764,7 +1082,11 @@ copyButton.addEventListener("click", () => {
 });
 
 dateInput.value = toDateTimeInput(new Date());
+loadTagLibrary();
 loadDraft();
+renderFavoriteTagPicker();
+renderTimestampCards();
+renderVideoPreview();
 updateCreateLink();
 loadFavorites();
 </script>

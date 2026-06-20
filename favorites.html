@@ -456,6 +456,7 @@ footer{
                 <div class="actions">
                     <button class="button green" type="submit">保存草稿</button>
                     <button class="button secondary" id="copyFavoriteMarkdown" type="button">复制收藏 Markdown</button>
+                    <button class="button danger" id="deleteFavoriteDraft" type="button">删除草稿</button>
                     <a class="button secondary" id="createFavoriteLink" href="https://github.com/wasdwry/wasdwry.github.io/new/main?filename=favorites/new-favorite.md" target="_blank" rel="noopener">发布到 GitHub</a>
                 </div>
                 <p class="form-note" id="favoriteDraftStatus">还没有保存收藏草稿。</p>
@@ -525,6 +526,7 @@ const recordTimestampButton = document.getElementById("recordTimestamp");
 const timestampCards = document.getElementById("timestampCards");
 const createLink = document.getElementById("createFavoriteLink");
 const copyButton = document.getElementById("copyFavoriteMarkdown");
+const deleteDraftButton = document.getElementById("deleteFavoriteDraft");
 const statusText = document.getElementById("favoriteDraftStatus");
 const favoriteSearch = document.getElementById("favoriteSearch");
 const tagLibraryKey = "wasdwry-favorite-tag-library";
@@ -763,6 +765,23 @@ function saveDraft(){
     };
     localStorage.setItem("wasdwry-favorite-draft", JSON.stringify(draft));
     statusText.textContent = `草稿已保存：${new Date().toLocaleString()}`;
+}
+
+function deleteDraft(){
+    localStorage.removeItem("wasdwry-favorite-draft");
+    titleInput.value = "";
+    urlInput.value = "";
+    dateInput.value = toDateTimeInput(new Date());
+    newTagInput.value = "";
+    descriptionInput.value = "";
+    currentTimeInput.value = "";
+    state.selectedDraftTags.clear();
+    state.timestampNotes = [];
+    renderFavoriteTagPicker();
+    renderTimestampCards();
+    renderVideoPreview();
+    updateCreateLink();
+    statusText.textContent = "草稿已删除。";
 }
 
 async function copyMarkdown(){
@@ -1080,6 +1099,7 @@ copyButton.addEventListener("click", () => {
     copyMarkdown();
     updateCreateLink();
 });
+deleteDraftButton.addEventListener("click", deleteDraft);
 
 dateInput.value = toDateTimeInput(new Date());
 loadTagLibrary();

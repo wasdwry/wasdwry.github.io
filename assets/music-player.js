@@ -15,6 +15,31 @@
             color:#1f2933;
             backdrop-filter:blur(10px);
             font-family:Arial,"Microsoft YaHei",sans-serif;
+            transition:transform .22s ease, opacity .22s ease;
+        }
+        .music-player.is-collapsed{
+            transform:translateX(calc(-100% + 48px));
+        }
+        .music-shell{
+            opacity:1;
+            transition:opacity .18s ease;
+        }
+        .music-player.is-collapsed .music-shell{
+            opacity:0;
+            pointer-events:none;
+        }
+        .music-toggle{
+            position:absolute;
+            right:-44px;
+            top:12px;
+            width:38px;
+            min-width:38px;
+            min-height:42px;
+            border:1px solid rgba(22,50,77,.2);
+            border-radius:0 8px 8px 0;
+            background:#16324d;
+            color:white;
+            box-shadow:0 10px 24px rgba(31,41,51,.2);
         }
         .music-title{
             margin:0 0 8px;
@@ -56,7 +81,13 @@
             .music-player{
                 left:12px;
                 bottom:68px;
-                width:calc(100vw - 24px);
+                width:calc(100vw - 72px);
+            }
+            .music-player.is-collapsed{
+                transform:translateX(calc(-100% + 42px));
+            }
+            .music-toggle{
+                right:-40px;
             }
         }
     `;
@@ -65,16 +96,19 @@
     const root = document.createElement("aside");
     root.className = "music-player";
     root.innerHTML = `
-        <p class="music-title">音乐播放器：正在读取播放列表...</p>
-        <div class="music-controls">
-            <button type="button" data-action="prev">‹</button>
-            <button type="button" data-action="play">▶</button>
-            <button type="button" data-action="next">›</button>
-            <input type="range" data-action="seek" min="0" max="100" value="0" step="1" aria-label="播放进度">
-        </div>
-        <div class="music-volume">
-            <span>音量</span>
-            <input type="range" data-action="volume" min="0" max="1" value="0.7" step="0.01" aria-label="音量">
+        <button class="music-toggle" type="button" data-action="toggle" aria-label="收起音乐播放器">‹</button>
+        <div class="music-shell">
+            <p class="music-title">音乐播放器：正在读取播放列表...</p>
+            <div class="music-controls">
+                <button type="button" data-action="prev">‹</button>
+                <button type="button" data-action="play">▶</button>
+                <button type="button" data-action="next">›</button>
+                <input type="range" data-action="seek" min="0" max="100" value="0" step="1" aria-label="播放进度">
+            </div>
+            <div class="music-volume">
+                <span>音量</span>
+                <input type="range" data-action="volume" min="0" max="1" value="0.7" step="0.01" aria-label="音量">
+            </div>
         </div>
     `;
     document.body.appendChild(root);
@@ -84,13 +118,14 @@
     let playlist = [];
     let current = 0;
     const title = root.querySelector(".music-title");
+    const toggleButton = root.querySelector('[data-action="toggle"]');
     const playButton = root.querySelector('[data-action="play"]');
     const seek = root.querySelector('[data-action="seek"]');
     const volume = root.querySelector('[data-action="volume"]');
 
     function setEmpty(){
         title.textContent = "音乐播放器：暂无音乐";
-        root.querySelectorAll("button,input").forEach(control => control.disabled = true);
+        root.querySelectorAll(".music-shell button,.music-shell input").forEach(control => control.disabled = true);
     }
 
     function trackLabel(track){
@@ -108,7 +143,15 @@
 
     root.addEventListener("click", event => {
         const action = event.target.dataset.action;
-        if(!action || !playlist.length) return;
+        if(!action) return;
+        if(action === "toggle"){
+            root.classList.toggle("is-collapsed");
+            const collapsed = root.classList.contains("is-collapsed");
+            toggleButton.textContent = collapsed ? "›" : "‹";
+            toggleButton.setAttribute("aria-label", collapsed ? "展开音乐播放器" : "收起音乐播放器");
+            return;
+        }
+        if(!playlist.length) return;
         if(action === "play"){
             if(audio.paused){
                 audio.play();

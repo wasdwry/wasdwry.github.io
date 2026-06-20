@@ -349,10 +349,51 @@ textarea{
     padding:18px;
     border:1px dashed rgba(96,112,132,0.45);
     border-radius:8px;
-    background:rgba(255,255,255,0.72);
-    line-height:1.7;
-}
-footer{
+            background:rgba(255,255,255,0.72);
+            line-height:1.7;
+        }
+        .compose-panel{
+            display:none;
+        }
+        .compose-panel.open{
+            display:block;
+        }
+        .reader-modal{
+            display:none;
+            position:fixed;
+            inset:0;
+            z-index:50;
+            overflow:auto;
+            padding:24px;
+            background:rgba(15,23,42,0.42);
+        }
+        .reader-modal.show{
+            display:block;
+        }
+        .reader-dialog{
+            max-width:780px;
+            margin:7vh auto;
+            padding:24px;
+            border:1px solid var(--line);
+            border-radius:8px;
+            background:white;
+            box-shadow:0 24px 70px rgba(15,23,42,0.28);
+        }
+        .reader-dialog h2{
+            margin:0 0 10px;
+        }
+        .reader-body{
+            white-space:pre-wrap;
+            line-height:1.8;
+            color:#34495e;
+        }
+        .reader-actions{
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin-top:18px;
+        }
+        footer{
     text-align:center;
     padding:34px 20px 44px;
     color:#536170;
@@ -398,14 +439,38 @@ footer{
         <h1>Favorites</h1>
         <p>收藏网页链接、工具、资料和灵感。每个收藏都可以带多个标签，也可以写一段可选描述，方便以后按主题和关键词找回来。</p>
         <div class="actions">
-            <a class="button green" href="#compose">添加收藏</a>
+            <button class="button green" id="toggleCompose" type="button">添加收藏</button>
             <a class="button secondary" href="#favoritesList">浏览收藏</a>
         </div>
     </div>
 </header>
 
 <main class="container">
-    <section class="panel" id="compose">
+    <section class="panel">
+        <div class="section-title">
+            <h2>检索收藏</h2>
+            <span>多标签筛选会显示包含任一标签的收藏</span>
+        </div>
+        <div class="search-box">
+            <label for="favoriteSearch">关键词查找</label>
+            <input id="favoriteSearch" type="search" placeholder="搜索标题、链接或描述...">
+        </div>
+        <div class="tag-filter" id="tagFilter">
+            <button class="tag-button active" type="button" data-tag="all">全部</button>
+        </div>
+    </section>
+
+    <section class="panel" id="favoritesList">
+        <div class="section-title">
+            <h2>收藏列表</h2>
+            <span>按收藏时间倒序排列</span>
+        </div>
+        <div class="favorites-grid" id="favoriteList">
+            <div class="empty-state">正在读取收藏……</div>
+        </div>
+    </section>
+
+    <section class="panel compose-panel" id="compose">
         <div class="section-title">
             <h2>添加收藏</h2>
             <span>复制 Markdown 后粘贴到 GitHub 新建文件页</span>
@@ -463,30 +528,6 @@ footer{
             </form>
         </article>
     </section>
-
-    <section class="panel">
-        <div class="section-title">
-            <h2>检索收藏</h2>
-            <span>多标签筛选会显示包含任一标签的收藏</span>
-        </div>
-        <div class="search-box">
-            <label for="favoriteSearch">关键词查找</label>
-            <input id="favoriteSearch" type="search" placeholder="搜索标题、链接或描述...">
-        </div>
-        <div class="tag-filter" id="tagFilter">
-            <button class="tag-button active" type="button" data-tag="all">全部</button>
-        </div>
-    </section>
-
-    <section class="panel" id="favoritesList">
-        <div class="section-title">
-            <h2>收藏列表</h2>
-            <span>按收藏时间倒序排列</span>
-        </div>
-        <div class="favorites-grid" id="favoriteList">
-            <div class="empty-state">正在读取收藏……</div>
-        </div>
-    </section>
 </main>
 
 <footer>
@@ -494,6 +535,15 @@ footer{
 </footer>
 
 <a class="top-button" href="#top">Top</a>
+<div class="reader-modal" id="readerModal">
+    <article class="reader-dialog">
+        <div id="readerContent"></div>
+        <div class="reader-actions">
+            <button class="button secondary" id="closeReader" type="button">关闭</button>
+            <a class="button" id="readerGithubLink" href="#" target="_blank" rel="noopener">在 GitHub 查看</a>
+        </div>
+    </article>
+</div>
 
 <script src="assets/music-player.js" defer></script>
 <script>
@@ -529,7 +579,17 @@ const copyButton = document.getElementById("copyFavoriteMarkdown");
 const deleteDraftButton = document.getElementById("deleteFavoriteDraft");
 const statusText = document.getElementById("favoriteDraftStatus");
 const favoriteSearch = document.getElementById("favoriteSearch");
+const composePanel = document.getElementById("compose");
+const toggleComposeButton = document.getElementById("toggleCompose");
+const readerModal = document.getElementById("readerModal");
+const readerContent = document.getElementById("readerContent");
+const readerGithubLink = document.getElementById("readerGithubLink");
 const tagLibraryKey = "wasdwry-favorite-tag-library";
+let currentVideo = null;
+let youtubePlayer = null;
+let vimeoPlayer = null;
+let youtubeApiReady = null;
+let vimeoApiReady = null;
 
 function pad(value){
     return String(value).padStart(2,"0");
@@ -659,16 +719,20 @@ function parseVideoUrl(rawUrl){
             if(!id && parsed.pathname.startsWith("/embed/")) id = parsed.pathname.split("/")[2];
             if(id) return {
                 platform:"YouTube",
+                provider:"youtube",
+                id,
                 seconds:start,
-                embedUrl:`https://www.youtube.com/embed/${encodeURIComponent(id)}${start ? `?start=${start}` : ""}`
+                embedUrl:`https://www.youtube.com/embed/${encodeURIComponent(id)}?enablejsapi=1${start ? `&start=${start}` : ""}`
             };
         }
         if(host === "youtu.be"){
             const id = parsed.pathname.split("/").filter(Boolean)[0];
             if(id) return {
                 platform:"YouTube",
+                provider:"youtube",
+                id,
                 seconds:start,
-                embedUrl:`https://www.youtube.com/embed/${encodeURIComponent(id)}${start ? `?start=${start}` : ""}`
+                embedUrl:`https://www.youtube.com/embed/${encodeURIComponent(id)}?enablejsapi=1${start ? `&start=${start}` : ""}`
             };
         }
         if(host.includes("bilibili.com")){
@@ -678,6 +742,8 @@ function parseVideoUrl(rawUrl){
                 const query = videoId.toLowerCase().startsWith("av") ? `aid=${encodeURIComponent(videoId.slice(2))}` : `bvid=${encodeURIComponent(videoId)}`;
                 return {
                     platform:"Bilibili",
+                    provider:"bilibili",
+                    id:videoId,
                     seconds:start,
                     embedUrl:`https://player.bilibili.com/player.html?${query}${start ? `&t=${start}` : ""}`
                 };
@@ -687,6 +753,8 @@ function parseVideoUrl(rawUrl){
             const id = parsed.pathname.split("/").filter(part => /^\d+$/.test(part)).pop();
             if(id) return {
                 platform:"Vimeo",
+                provider:"vimeo",
+                id,
                 seconds:start,
                 embedUrl:`https://player.vimeo.com/video/${id}${start ? `#t=${start}s` : ""}`
             };
@@ -697,8 +765,59 @@ function parseVideoUrl(rawUrl){
     return null;
 }
 
+function loadScript(src,id){
+    if(document.getElementById(id)) return Promise.resolve();
+    return new Promise((resolve,reject) => {
+        const script = document.createElement("script");
+        script.id = id;
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+function loadYoutubeApi(){
+    if(window.YT && window.YT.Player) return Promise.resolve();
+    if(youtubeApiReady) return youtubeApiReady;
+    youtubeApiReady = new Promise(resolve => {
+        const previous = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+            if(typeof previous === "function") previous();
+            resolve();
+        };
+        loadScript("https://www.youtube.com/iframe_api","youtube-iframe-api").catch(resolve);
+    });
+    return youtubeApiReady;
+}
+
+function loadVimeoApi(){
+    if(window.Vimeo && window.Vimeo.Player) return Promise.resolve();
+    if(vimeoApiReady) return vimeoApiReady;
+    vimeoApiReady = loadScript("https://player.vimeo.com/api/player.js","vimeo-player-api");
+    return vimeoApiReady;
+}
+
+async function prepareVideoPlayer(video){
+    youtubePlayer = null;
+    vimeoPlayer = null;
+    if(video.provider === "youtube"){
+        await loadYoutubeApi();
+        if(window.YT && window.YT.Player){
+            youtubePlayer = new YT.Player("videoIframe");
+        }
+    }
+    if(video.provider === "vimeo"){
+        await loadVimeoApi();
+        if(window.Vimeo && window.Vimeo.Player){
+            vimeoPlayer = new Vimeo.Player(document.getElementById("videoIframe"));
+        }
+    }
+}
+
 function renderVideoPreview(){
     const video = parseVideoUrl(urlInput.value.trim());
+    currentVideo = video;
     if(!urlInput.value.trim()){
         videoPreview.innerHTML = `<p class="form-note">输入 YouTube、Bilibili 或 Vimeo 链接后，可以解析为视频预览；普通网页仍可作为收藏保存。</p>`;
         return;
@@ -712,10 +831,11 @@ function renderVideoPreview(){
     }
     videoPreview.innerHTML = `
         <div class="video-frame">
-            <iframe src="${escapeHtml(video.embedUrl)}" title="${escapeHtml(video.platform)} 视频预览" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <iframe id="videoIframe" src="${escapeHtml(video.embedUrl)}" title="${escapeHtml(video.platform)} 视频预览" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
         </div>
-        <p class="form-note">${escapeHtml(video.platform)} 预览已生成。若浏览器无法读取播放进度，请在“当前时间”里手动填写时间点后记录。</p>
+        <p class="form-note">${escapeHtml(video.platform)} 预览已生成。YouTube/Vimeo 会优先读取播放进度；如果读取失败，可继续手动填写时间点。</p>
     `;
+    prepareVideoPlayer(video).catch(() => {});
 }
 
 function renderTimestampCards(){
@@ -733,11 +853,27 @@ function renderTimestampCards(){
     `).join("");
 }
 
-function recordTimestamp(){
+async function getCurrentVideoSeconds(){
+    try{
+        if(currentVideo && currentVideo.provider === "youtube" && youtubePlayer && typeof youtubePlayer.getCurrentTime === "function"){
+            return Math.floor(youtubePlayer.getCurrentTime() || 0);
+        }
+        if(currentVideo && currentVideo.provider === "vimeo" && vimeoPlayer && typeof vimeoPlayer.getCurrentTime === "function"){
+            return Math.floor(await vimeoPlayer.getCurrentTime());
+        }
+    }catch(error){
+        return 0;
+    }
+    return 0;
+}
+
+async function recordTimestamp(){
     const video = parseVideoUrl(urlInput.value.trim());
-    const seconds = parseFlexibleTime(currentTimeInput.value) || (video ? video.seconds : 0);
-    const time = currentTimeInput.value.trim() || secondsToTimestamp(seconds);
+    const autoSeconds = await getCurrentVideoSeconds();
+    const seconds = autoSeconds || parseFlexibleTime(currentTimeInput.value) || (video ? video.seconds : 0);
+    const time = autoSeconds ? secondsToTimestamp(seconds) : (currentTimeInput.value.trim() || secondsToTimestamp(seconds));
     state.timestampNotes.push({ time, note:"", seconds });
+    currentTimeInput.value = secondsToTimestamp(seconds);
     renderTimestampCards();
     statusText.textContent = "已记录时间点，可以在卡片里补充笔记。";
 }
@@ -1000,7 +1136,7 @@ function renderFavorites(){
             ${item.tags.length ? `<div class="tags">${item.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
             <div class="item-actions">
                 ${item.url ? `<a class="button small green" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">打开</a>` : ""}
-                <a class="button small" href="${item.viewUrl}" target="_blank" rel="noopener">查看</a>
+                <button class="button small" type="button" data-view-index="${state.favorites.indexOf(item)}">查看</button>
                 <a class="button small secondary" href="${item.editUrl}" target="_blank" rel="noopener">编辑</a>
                 <a class="button small danger" href="${item.deleteUrl}" target="_blank" rel="noopener">删除</a>
             </div>
@@ -1012,6 +1148,31 @@ function renderAll(){
     renderTags();
     renderFavoriteTagPicker();
     renderFavorites();
+}
+
+function openReader(item){
+    readerContent.innerHTML = `
+        <h2>${escapeHtml(item.title)}</h2>
+        <div class="meta"><span>${escapeHtml(item.date)}</span></div>
+        ${item.url ? `<p><a class="favorite-url" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.url)}</a></p>` : ""}
+        ${item.tags.length ? `<div class="tags">${item.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+        <div class="reader-body">${escapeHtml(item.description || "暂无描述。")}</div>
+        ${renderTimestampNotes(item)}
+    `;
+    readerGithubLink.href = item.viewUrl;
+    readerModal.classList.add("show");
+}
+
+function closeReader(){
+    readerModal.classList.remove("show");
+}
+
+function toggleCompose(){
+    composePanel.classList.toggle("open");
+    toggleComposeButton.textContent = composePanel.classList.contains("open") ? "收起添加收藏" : "添加收藏";
+    if(composePanel.classList.contains("open")){
+        composePanel.scrollIntoView({ behavior:"smooth", block:"start" });
+    }
 }
 
 document.getElementById("tagFilter").addEventListener("click", event => {
@@ -1032,6 +1193,18 @@ favoriteSearch.addEventListener("input", event => {
     state.searchQuery = event.target.value;
     renderAll();
 });
+
+document.getElementById("favoriteList").addEventListener("click", event => {
+    const button = event.target.closest("[data-view-index]");
+    if(!button) return;
+    openReader(state.favorites[Number(button.dataset.viewIndex)]);
+});
+
+document.getElementById("closeReader").addEventListener("click", closeReader);
+readerModal.addEventListener("click", event => {
+    if(event.target === readerModal) closeReader();
+});
+toggleComposeButton.addEventListener("click", toggleCompose);
 
 tagPicker.addEventListener("click", event => {
     const button = event.target.closest("[data-draft-tag]");

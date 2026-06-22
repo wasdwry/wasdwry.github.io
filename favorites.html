@@ -608,6 +608,8 @@ textarea{
 
 <script src="assets/dynamic-background.js" defer></script>
 <script src="assets/music-player.js" defer></script>
+<script src="assets/comments-config.js" defer></script>
+<script src="assets/comments.js" defer></script>
 <script>
 const repoOwner = "wasdwry";
 const repoName = "wasdwry.github.io";
@@ -1245,6 +1247,7 @@ function renderFavorites(){
             <div class="item-actions">
                 ${item.url ? `<a class="button small green" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">打开</a>` : ""}
                 <button class="button small" type="button" data-view-index="${state.favorites.indexOf(item)}">查看</button>
+                <button class="button small secondary" type="button" data-comment-index="${state.favorites.indexOf(item)}">留言</button>
                 <a class="button small secondary" href="${item.editUrl}" target="_blank" rel="noopener">编辑</a>
                 <a class="button small danger" href="${item.deleteUrl}" target="_blank" rel="noopener">删除</a>
             </div>
@@ -1258,7 +1261,7 @@ function renderAll(){
     renderFavorites();
 }
 
-function openReader(item){
+function openReader(item, focusComments = false){
     readerContent.innerHTML = `
         <h2>${escapeHtml(item.title)}</h2>
         <div class="meta"><span>${escapeHtml(item.date)}</span></div>
@@ -1266,9 +1269,14 @@ function openReader(item){
         ${item.tags.length ? `<div class="tags">${item.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <div class="reader-body">${escapeHtml(item.description || "暂无描述。")}</div>
         ${renderTimestampNotes(item)}
+        <section id="commentsMount"></section>
     `;
     readerGithubLink.href = item.viewUrl;
     readerModal.classList.add("show");
+    if(window.WasdwryComments){
+        window.WasdwryComments.render({ term:`favorite:${item.path}` });
+        if(focusComments) window.WasdwryComments.scrollToComments();
+    }
 }
 
 function closeReader(){
@@ -1303,6 +1311,11 @@ favoriteSearch.addEventListener("input", event => {
 });
 
 document.getElementById("favoriteList").addEventListener("click", event => {
+    const commentButton = event.target.closest("[data-comment-index]");
+    if(commentButton){
+        openReader(state.favorites[Number(commentButton.dataset.commentIndex)], true);
+        return;
+    }
     const button = event.target.closest("[data-view-index]");
     if(!button) return;
     openReader(state.favorites[Number(button.dataset.viewIndex)]);

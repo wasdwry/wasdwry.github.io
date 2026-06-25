@@ -12,6 +12,7 @@
             z-index:0;
             overflow:hidden;
             pointer-events:none;
+            opacity:.48;
         }
         header,main,footer{
             position:relative;

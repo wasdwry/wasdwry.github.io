@@ -7,12 +7,12 @@
 <style>
 :root{--text:#1f2933;--muted:#607084;--line:rgba(31,41,51,.12);--panel:rgba(255,255,255,.94);--primary:#1769aa;--primary-dark:#0f4d7d;--green:#2f7d5b;--danger:#b42318}
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,"Microsoft YaHei",sans-serif;background:#8fdcff url("assets/pixel-town-bg.png") center top/cover fixed no-repeat;color:var(--text);overflow-x:hidden}
+body{margin:0;font-family:Arial,"Microsoft YaHei",sans-serif;background-color:#8fdcff;background-image:url("assets/pixel-town-bg.png");background-image:image-set(url("assets/pixel-town-bg.webp") type("image/webp"),url("assets/pixel-town-bg.png") type("image/png"));background-position:center top;background-size:cover;background-attachment:fixed;background-repeat:no-repeat;color:var(--text);overflow-x:hidden}
 body::before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 18% 24%,rgba(255,231,135,.38),transparent 20%),linear-gradient(120deg,rgba(255,185,104,.18),rgba(102,215,255,.16),rgba(255,255,255,.22));background-size:170% 170%,220% 220%;animation:townGlow 40s ease-in-out infinite alternate;pointer-events:none;z-index:-2}
 body::after{content:"";position:fixed;inset:-12%;background:radial-gradient(ellipse at 15% 22%,rgba(255,255,255,.58) 0 7%,transparent 18%),radial-gradient(ellipse at 54% 16%,rgba(255,255,255,.46) 0 8%,transparent 20%),repeating-linear-gradient(90deg,transparent 0 70px,rgba(255,213,112,.22) 72px 78px,transparent 82px 160px);background-size:520px 220px,620px 240px,100% 100%;opacity:.62;animation:townClouds 58s linear infinite;pointer-events:none;z-index:-1}
 @keyframes townGlow{from{background-position:0% 50%,0% 50%}to{background-position:100% 50%,100% 50%}}
 @keyframes townClouds{from{transform:translate3d(-5%,0,0)}to{transform:translate3d(5%,1%,0)}}
-@media (prefers-reduced-motion: reduce){body::before,body::after{animation:none}}
+@media (prefers-reduced-motion: reduce){body{background-image:url("assets/pixel-town-bg.png")}body::before,body::after{animation:none}}
 header{min-height:360px;padding:34px 20px 72px}.navbar,.hero,.container{max-width:1120px;margin-left:auto;margin-right:auto}
 .navbar{display:flex;align-items:center;justify-content:space-between;gap:18px}.logo{font-size:20px;font-weight:700}
 nav{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px 18px}nav a{color:#203247;text-decoration:none;font-weight:700}

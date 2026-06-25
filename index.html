@@ -18,7 +18,13 @@
 body{
     margin:0;
     font-family:Arial,"Microsoft YaHei",sans-serif;
-    background:#8de4ff url("assets/pixel-beach-bg.png") center top/cover fixed no-repeat;
+    background-color:#8de4ff;
+    background-image:url("assets/pixel-beach-bg.png");
+    background-image:image-set(url("assets/pixel-beach-bg.webp") type("image/webp"),url("assets/pixel-beach-bg.png") type("image/png"));
+    background-position:center top;
+    background-size:cover;
+    background-attachment:fixed;
+    background-repeat:no-repeat;
     color:var(--text);
     overflow-x:hidden;
 }
@@ -57,6 +63,7 @@ body::after{
     to{transform:translate3d(4%,2%,0)}
 }
 @media (prefers-reduced-motion: reduce){
+    body{background-image:url("assets/pixel-beach-bg.png")}
     body::before,body::after{animation:none}
 }
 header{

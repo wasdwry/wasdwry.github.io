@@ -19,7 +19,13 @@
 body{
     margin:0;
     font-family:Arial,"Microsoft YaHei",sans-serif;
-    background:#3d2b72 url("assets/pixel-mine-bg.png") center top/cover fixed no-repeat;
+    background-color:#3d2b72;
+    background-image:url("assets/pixel-mine-bg.png");
+    background-image:image-set(url("assets/pixel-mine-bg.webp") type("image/webp"),url("assets/pixel-mine-bg.png") type("image/png"));
+    background-position:center top;
+    background-size:cover;
+    background-attachment:fixed;
+    background-repeat:no-repeat;
     color:var(--text);
     overflow-x:hidden;
 }
@@ -63,6 +69,7 @@ body::after{
     to{transform:translate3d(3%,1%,0)}
 }
 @media (prefers-reduced-motion: reduce){
+    body{background-image:url("assets/pixel-mine-bg.png")}
     body::before,body::after{animation:none}
 }
 header{

@@ -7,7 +7,7 @@
     const style = document.createElement("style");
     style.textContent = `
         .music-player{position:fixed;left:18px;bottom:18px;z-index:21;width:min(390px,calc(100vw - 96px));padding:12px;border:1px solid rgba(31,41,51,.14);border-radius:8px;background:rgba(255,255,255,.94);box-shadow:0 12px 28px rgba(31,41,51,.18);color:#1f2933;backdrop-filter:blur(10px);font-family:Arial,"Microsoft YaHei",sans-serif;transition:transform .22s ease,opacity .22s ease}
-        .music-player.is-collapsed{transform:translateX(calc(-100% + 48px))}
+        .music-player.is-collapsed{transform:translateX(calc(-100% + 6px))}
         .music-shell{opacity:1;transition:opacity .18s ease}.music-player.is-collapsed .music-shell{opacity:0;pointer-events:none}
         .music-toggle{position:absolute;right:-44px;top:12px;width:38px;min-width:38px;min-height:42px;border:1px solid rgba(22,50,77,.2);border-radius:0 8px 8px 0;background:#16324d;color:white;box-shadow:0 10px 24px rgba(31,41,51,.2)}
         .music-title{margin:0 0 8px;color:#34495e;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -30,7 +30,7 @@
         .music-embed{display:none;margin-top:10px;border-radius:8px;overflow:hidden;background:#102033}
         .music-embed.show{display:block}
         .music-embed iframe{width:100%;height:96px;border:0;display:block}
-        @media(max-width:680px){.music-player{left:12px;bottom:68px;width:calc(100vw - 72px)}.music-player.is-collapsed{transform:translateX(calc(-100% + 42px))}.music-toggle{right:-40px}.music-controls{grid-template-columns:auto auto auto auto}.music-controls input[data-action="seek"]{grid-column:1/-1}.music-list-item{grid-template-columns:1fr auto}}
+        @media(max-width:680px){.music-player{left:12px;bottom:68px;width:calc(100vw - 72px)}.music-player.is-collapsed{transform:translateX(calc(-100% + 6px))}.music-toggle{right:-40px}.music-controls{grid-template-columns:auto auto auto auto}.music-controls input[data-action="seek"]{grid-column:1/-1}.music-list-item{grid-template-columns:1fr auto}}
     `;
     document.head.appendChild(style);
 

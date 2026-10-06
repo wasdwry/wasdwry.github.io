@@ -19,52 +19,14 @@ body{
     margin:0;
     font-family:Arial,"Microsoft YaHei",sans-serif;
     background-color:#8de4ff;
-    background-image:url("assets/pixel-beach-bg.png");
-    background-image:image-set(url("assets/pixel-beach-bg.webp") type("image/webp"),url("assets/pixel-beach-bg.png") type("image/png"));
+    
+    
     background-position:center top;
     background-size:cover;
     background-attachment:fixed;
     background-repeat:no-repeat;
     color:var(--text);
     overflow-x:hidden;
-}
-body::before{
-    content:"";
-    position:fixed;
-    inset:0;
-    background:
-        radial-gradient(circle at 18% 18%,rgba(255,236,144,0.42),transparent 24%),
-        linear-gradient(120deg,rgba(255,255,255,0.24),rgba(104,218,255,0.18),rgba(255,179,102,0.14));
-    background-size:180% 180%,220% 220%;
-    animation:beachLight 34s ease-in-out infinite alternate;
-    pointer-events:none;
-    z-index:-2;
-}
-body::after{
-    content:"";
-    position:fixed;
-    inset:-18%;
-    background:
-        linear-gradient(90deg,transparent 0 18%,rgba(255,255,255,0.36) 22%,transparent 30% 52%,rgba(255,248,190,0.28) 58%,transparent 66%),
-        repeating-linear-gradient(0deg,rgba(31,154,211,0.14) 0 3px,transparent 3px 12px);
-    background-size:360px 100%,100% 46px;
-    opacity:0.62;
-    transform:translate3d(0,0,0);
-    animation:beachDrift 46s linear infinite;
-    pointer-events:none;
-    z-index:-1;
-}
-@keyframes beachLight{
-    from{background-position:0% 45%,0% 50%}
-    to{background-position:100% 55%,100% 50%}
-}
-@keyframes beachDrift{
-    from{transform:translate3d(-4%,0,0)}
-    to{transform:translate3d(4%,2%,0)}
-}
-@media (prefers-reduced-motion: reduce){
-    body{background-image:url("assets/pixel-beach-bg.png")}
-    body::before,body::after{animation:none}
 }
 header{
     min-height:520px;
@@ -215,6 +177,8 @@ footer{
         grid-template-columns:1fr;
     }
 }
+body{background-image:linear-gradient(#9dcddd,#e8e6d0)}
+body::before,body::after{display:none}
 </style>
 </head>
 <body>
@@ -246,7 +210,7 @@ footer{
         <article class="portal-card">
             <div>
                 <h2>日记</h2>
-                <p>记录生活片段、心情和心得。支持多标签、标题正文搜索、复制 Markdown 和 GitHub 管理入口。</p>
+                <p>记录生活片段、心情和心得。支持标题正文搜索、复制 Markdown 和 GitHub 管理入口。</p>
             </div>
             <a class="button green" href="diary.html">写日记</a>
         </article>
@@ -271,7 +235,8 @@ footer{
 © 2026 wasdwry
 </footer>
 <a class="top-button" href="#top">Top</a>
-<script src="assets/dynamic-background.js" defer></script>
+<script src="assets/dynamic-background.js?v=20261007" defer></script>
 <script src="assets/music-player.js" defer></script>
 </body>
 </html>
+

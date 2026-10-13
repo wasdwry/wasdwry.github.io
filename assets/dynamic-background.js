@@ -2,10 +2,12 @@
 (function () {
     'use strict';
     const page=location.pathname.split('/').pop()||'index.html';
-    const theme=page.includes('diary')?'lake':page.includes('posts')?'town':page.includes('favorites')?'mine':'beach';
+    if(new URLSearchParams(location.search).has('desk')&&window.parent!==window)return;
+    const immersive=document.body.dataset.immersive==='true';let view='outside';
+    const theme=(immersive||page.includes('diary'))?'lake':page.includes('posts')?'town':page.includes('favorites')?'mine':'beach';
     const themes={beach:'pixel-beach-bg',lake:'pixel-starry-night-bg',town:'pixel-town-bg',mine:'pixel-mine-bg'};
     const original=`assets/${themes[theme]}.webp`;
-    const canvas=document.createElement('canvas');canvas.className='dynamic-bg';canvas.setAttribute('aria-hidden','true');
+    let canvas=document.createElement('canvas');canvas.className='dynamic-bg';canvas.setAttribute('aria-hidden','true');
     const style=document.createElement('style');
     style.textContent=`
         body{background-image:url("${original}")!important;background-color:#182a42;background-size:cover;background-position:center top;background-attachment:fixed}
@@ -40,7 +42,8 @@
     pauseButton.addEventListener('click',()=>{paused=!paused;updatePauseButton();restart();});
     document.addEventListener('keydown',event=>{if(event.key==='Escape')focusBackground(false);});
     media.addEventListener('change',()=>{paused=media.matches;updatePauseButton();restart();});
-    controls.append(focusButton,pauseButton);document.body.appendChild(controls);
+    controls.append(focusButton,pauseButton);if(!immersive)document.body.appendChild(controls);
+    window.WasdwryLandscape={get paused(){return paused;},toggle(){paused=!paused;updatePauseButton();restart();},setView(next){view=next;canvas.style.display=next==='hall'?'none':'block';const mount=next==='study'?document.getElementById('studyWindow'):document.body;mount.prepend(canvas);resize();}};
     function updateClock(){
         const d=new Date(),minute=d.getHours()*60+d.getMinutes();if(minute===previousMinute)return;
         previousMinute=minute;const hour=minute/60;
@@ -149,11 +152,11 @@
         });
         gl.uniform1f(locations.scene,['beach','lake','town','mine'].indexOf(theme));canvas.dataset.renderer='webgl';
     }
-    function geometry(){const scale=Math.max(canvas.width/nightImage.naturalWidth,canvas.height/nightImage.naturalHeight);return {width:nightImage.naturalWidth*scale,height:nightImage.naturalHeight*scale};}
+    function geometry(){if(immersive&&view==='study')return {width:canvas.width/.60,height:canvas.height/.68,ox:.38,oy:.27};const scale=Math.max(canvas.width/nightImage.naturalWidth,canvas.height/nightImage.naturalHeight),width=nightImage.naturalWidth*scale,height=nightImage.naturalHeight*scale;return {width,height,ox:immersive&&innerWidth<700?0:(1-canvas.width/width)/2,oy:0};}
     function drawFallback(){
-        const {width,height}=geometry(),x=(canvas.width-width)/2;
-        ctx.globalAlpha=1;ctx.drawImage(nightImage,x,0,width,height);
-        if(theme==='lake'){ctx.globalAlpha=light;ctx.drawImage(dayImage,x,0,width,height);ctx.globalAlpha=1;}
+        const {width,height,ox,oy}=geometry(),x=-ox*width,y=-oy*height;
+        ctx.globalAlpha=1;ctx.drawImage(nightImage,x,y,width,height);
+        if(theme==='lake'){ctx.globalAlpha=light;ctx.drawImage(dayImage,x,y,width,height);ctx.globalAlpha=1;}
         else{ctx.fillStyle=`rgba(7,20,54,${(1-light)*(theme==='mine'?.08:.65)})`;ctx.fillRect(0,0,canvas.width,canvas.height);}
         const t=elapsed/1000;
         // Graceful non-WebGL renderer: animated highlights, original full-detail artwork.
@@ -166,18 +169,18 @@
     function draw(){
         updateClock();if(!ready||contextLost)return;
         if(gl){
-            const {width,height}=geometry();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(locations.crop,canvas.width/width,canvas.height/height);gl.uniform2f(locations.offset,(1-canvas.width/width)/2,0);
+            const {width,height,ox,oy}=geometry();gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(locations.crop,canvas.width/width,canvas.height/height);gl.uniform2f(locations.offset,ox,oy);
             gl.uniform1f(locations.time,elapsed/1000);gl.uniform1f(locations.daylight,light);gl.uniform1f(locations.warmth,warmth);gl.drawArrays(gl.TRIANGLES,0,6);
         }else if(ctx)drawFallback();
     }
-    function animate(now){frame=0;if(document.hidden||paused||contextLost)return;if(!last)last=now;const delta=now-last;if(delta>=1000/30){elapsed+=Math.min(delta,100);last=now;draw();}frame=requestAnimationFrame(animate);}
+    function animate(now){frame=0;if(document.hidden||paused||contextLost||(immersive&&view==='hall'))return;if(!last)last=now;const delta=now-last;if(delta>=1000/30){elapsed+=Math.min(delta,100);last=now;draw();}frame=requestAnimationFrame(animate);}
     function restart(){cancelAnimationFrame(frame);frame=0;last=0;if(document.hidden||!ready||contextLost)return;draw();if(!paused)frame=requestAnimationFrame(animate);}
-    function resize(){const dpr=Math.min(devicePixelRatio||1,1.5,1920/innerWidth,1200/innerHeight);canvas.width=Math.max(1,Math.round(innerWidth*dpr));canvas.height=Math.max(1,Math.round(innerHeight*dpr));restart();}
+    function resize(){const rect=canvas.getBoundingClientRect(),w=rect.width||innerWidth,h=rect.height||innerHeight,dpr=Math.min(devicePixelRatio||1,1.5,1920/w,1200/h);canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));restart();}
     function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('Background unavailable: '+url));image.src=url;});}
     async function init(){
         try{
             nightImage=await loadImage(original);dayImage=theme==='lake'?await loadImage('assets/pixel-lake-day-bg.webp').catch(()=>nightImage):nightImage;
-            if(gl)setupGPU();else canvas.dataset.renderer='canvas2d';
+            if(gl){try{setupGPU();}catch(_){const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);canvas=replacement;gl=null;contextLost=false;ctx=canvas.getContext('2d',{alpha:false});canvas.dataset.renderer='canvas2d';}}else canvas.dataset.renderer='canvas2d';
             ready=true;canvas.dataset.artwork=themes[theme];resize();
         }catch(error){canvas.style.display='none';console.warn('Using original background fallback.',error);}
     }

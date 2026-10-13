@@ -1,4 +1,5 @@
 (function(){
+    if(new URLSearchParams(location.search).has("desk")&&window.parent!==window)return;
     const userListKey = "wasdwry-music-user-list";
     const dbName = "wasdwry-music-library";
     const storeName = "files";
@@ -31,14 +32,20 @@
         .music-embed.show{display:block}
         .music-embed iframe{width:100%;height:96px;border:0;display:block}
         @media(max-width:680px){.music-player{left:12px;bottom:68px;width:calc(100vw - 72px)}.music-player.is-collapsed{transform:translateX(calc(-100% + 6px))}.music-toggle{right:-40px}.music-controls{grid-template-columns:auto auto auto auto}.music-controls input[data-action="seek"]{grid-column:1/-1}.music-list-item{grid-template-columns:1fr auto}}
+
+        .music-player{left:auto;bottom:auto;right:max(18px,env(safe-area-inset-right));top:max(78px,calc(env(safe-area-inset-top) + 66px));width:min(390px,calc(100vw - 28px));z-index:40;padding:0;border:0;box-shadow:none;background:transparent;backdrop-filter:none;transition:none}
+        .music-player.is-collapsed{transform:none}.music-shell{padding:15px;border:1px solid #d9c69c;border-radius:14px;background:#fff9edee;backdrop-filter:blur(14px);box-shadow:0 12px 40px #18232c40;max-height:calc(100dvh - 100px);overflow:auto}.music-player.is-collapsed .music-shell{visibility:hidden;opacity:0;pointer-events:none}
+        .music-player .music-toggle{position:fixed;right:max(18px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));width:52px;height:52px;padding:3px;min-width:52px;border:1px solid #f1dcac66;border-radius:50%;background:#302b24bd;box-shadow:0 4px 18px #111b2930;backdrop-filter:blur(8px);color:#f2d89e;overflow:visible}
+        .music-toggle svg{display:block;width:44px;height:44px;pointer-events:none}.music-toggle .music-notes{opacity:0}.music-player.is-playing .music-toggle{border-color:#ffdc89;box-shadow:0 0 18px #f9c76366}.music-player.is-playing .music-notes{opacity:1;animation:musicFloat 1.7s ease-in-out infinite alternate}.music-player.is-playing .gramophone-disc{animation:recordGlow 1s linear infinite alternate}.music-toggle:focus-visible{outline:3px solid #ffe4a1;outline-offset:4px}@keyframes musicFloat{to{transform:translateY(-3px)}}@keyframes recordGlow{to{filter:brightness(1.6)}}
+        body:not([data-immersive]) .navbar{padding-right:65px}@media(max-width:680px){.music-player{left:auto;right:12px;bottom:auto;top:74px;width:calc(100vw - 24px)}.music-player.is-collapsed{transform:none}.music-player .music-toggle{right:12px;top:12px}}@media(prefers-reduced-motion:reduce){.music-player *{animation:none!important;transition:none!important}}
     `;
     document.head.appendChild(style);
 
     const root = document.createElement("aside");
-    root.className = "music-player";
+    root.className = "music-player is-collapsed";
     root.innerHTML = `
-        <button class="music-toggle" type="button" data-action="toggle" aria-label="收起音乐播放器">‹</button>
-        <div class="music-shell">
+        <button class="music-toggle" type="button" data-action="toggle" aria-label="打开留声机（未播放）" aria-expanded="false" aria-controls="musicShell" title="留声机"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M31 36V26Q27 19 31 14" fill="none" stroke="#bd8a49" stroke-width="4"/><path d="M29 14Q43 16 50 5L57 28Q42 25 33 28Z" fill="#d4aa62" stroke="#78522b" stroke-width="2"/><ellipse cx="53" cy="16" rx="5" ry="12" transform="rotate(-17 53 16)" fill="#60452e" stroke="#f1d398" stroke-width="2"/><path d="M11 40L44 37L54 44L20 49Z" fill="#bd834d"/><path d="M11 40V53L20 59L54 53V44L20 49Z" fill="#784d33" stroke="#dfb67a" stroke-width="1.5"/><g class="gramophone-disc"><ellipse cx="31" cy="41" rx="14" ry="4" fill="#2b3439" stroke="#dab776"/><path d="M22 40L40 42" stroke="#607477"/><ellipse cx="31" cy="41" rx="3" ry="1.5" fill="#edc57f"/></g><path d="M46 33L46 40L36 43" fill="none" stroke="#edcb85" stroke-width="2"/><path class="music-notes" d="M12 13v12m0-10l9-3v10m-9 3c-5-2-7 5-2 4 3 0 3-2 2-4m9-3c-5-2-7 5-2 4 3 0 3-2 2-4" fill="none" stroke="#ffe1a0" stroke-width="2"/></svg></button>
+        <div class="music-shell" id="musicShell" inert>
             <p class="music-title">音乐播放器：正在读取播放列表...</p>
             <div class="music-controls">
                 <button type="button" data-action="prev">‹</button>
@@ -90,6 +97,14 @@
     const fileInput = root.querySelector("#musicFileInput");
     const embedBox = root.querySelector("#musicEmbed");
 
+    function updatePlaying(){
+        const playing=activeMode==='audio'?!audio.paused&&!audio.ended:embedPlaying;
+        root.classList.toggle('is-playing',playing);
+        const collapsed=root.classList.contains('is-collapsed');
+        toggleButton.setAttribute('aria-label',`${collapsed?'打开':'收起'}留声机（${playing?'正在播放':'未播放'}）`);
+        playButton.textContent=playing?'暂停':'▶';
+    }
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!root.classList.contains('is-collapsed')){root.classList.add('is-collapsed');root.querySelector('.music-shell').inert=true;toggleButton.setAttribute('aria-expanded','false');updatePlaying();toggleButton.focus();}});
     function uid(prefix){
         return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
@@ -271,6 +286,7 @@
         embedBox.innerHTML = "";
         embedPlayer = null;
         embedPlaying = false;
+        updatePlaying();
     }
 
     function loadScript(src,id){
@@ -314,11 +330,11 @@
         embedBox.classList.add("show");
         if(track.provider === "youtube"){
             await loadYoutubeApi();
-            if(window.YT && window.YT.Player) embedPlayer = new YT.Player("musicEmbedFrame");
+            if(window.YT && window.YT.Player) embedPlayer = new YT.Player("musicEmbedFrame",{events:{onStateChange:event=>{embedPlaying=event.data===1;updatePlaying();}}});
         }
         if(track.provider === "vimeo"){
             await loadVimeoApi();
-            if(window.Vimeo && window.Vimeo.Player) embedPlayer = new Vimeo.Player(document.getElementById("musicEmbedFrame"));
+            if(window.Vimeo && window.Vimeo.Player) {embedPlayer = new Vimeo.Player(document.getElementById("musicEmbedFrame"));for(const name of ["play","pause","ended"])embedPlayer.on(name,()=>{embedPlaying=name==="play";updatePlaying();});}
         }
         setStatus(track.provider === "spotify" || track.provider === "netease" ? "这个平台需要在嵌入播放器里操作播放。" : "已加载嵌入播放器。");
     }
@@ -352,7 +368,7 @@
             audio.src = await resolveAudioSource(track);
             seek.value = 0;
             setStatus("");
-            if(autoplay) audio.play();
+            if(autoplay) audio.play().catch(()=>setStatus("播放未能开始，请再次点击播放。"));
         }catch(error){
             setStatus("无法加载这首音乐，可能文件已被浏览器清理。");
         }
@@ -366,13 +382,13 @@
                 if(track.provider === "youtube" && embedPlayer && embedPlayer.playVideo){
                     embedPlayer.playVideo();
                     embedPlaying = true;
-                    playButton.textContent = "暂停";
+                    updatePlaying();
                     return;
                 }
                 if(track.provider === "vimeo" && embedPlayer && embedPlayer.play){
                     await embedPlayer.play();
                     embedPlaying = true;
-                    playButton.textContent = "暂停";
+                    updatePlaying();
                     return;
                 }
             }catch(error){
@@ -382,7 +398,7 @@
             setStatus("请在嵌入播放器中点击播放。");
             return;
         }
-        if(audio.paused) audio.play(); else audio.pause();
+        if(audio.paused) audio.play().catch(()=>setStatus("播放未能开始，请再次点击播放。")); else audio.pause();
     }
 
     async function pauseEmbed(){
@@ -391,7 +407,7 @@
             if(track && track.provider === "youtube" && embedPlayer && embedPlayer.pauseVideo) embedPlayer.pauseVideo();
             if(track && track.provider === "vimeo" && embedPlayer && embedPlayer.pause) await embedPlayer.pause();
             embedPlaying = false;
-            playButton.textContent = "▶";
+            updatePlaying();
         }catch(error){
             setStatus("这个嵌入播放器不支持外部暂停。");
         }
@@ -472,13 +488,14 @@
     }
 
     root.addEventListener("click", event => {
-        const action = event.target.dataset.action;
+        const action = event.target.closest("[data-action]")?.dataset.action;
         if(!action) return;
         if(action === "toggle"){
             root.classList.toggle("is-collapsed");
             const collapsed = root.classList.contains("is-collapsed");
-            toggleButton.textContent = collapsed ? "›" : "‹";
-            toggleButton.setAttribute("aria-label", collapsed ? "展开音乐播放器" : "收起音乐播放器");
+            root.querySelector(".music-shell").inert=collapsed;
+            toggleButton.setAttribute("aria-expanded",String(!collapsed));
+            updatePlaying();
             return;
         }
         if(action === "panel"){
@@ -516,8 +533,10 @@
     volume.addEventListener("input", () => {
         audio.volume = Number(volume.value);
     });
-    audio.addEventListener("play", () => playButton.textContent = "暂停");
-    audio.addEventListener("pause", () => playButton.textContent = "▶");
+    audio.addEventListener("play", updatePlaying);
+    audio.addEventListener("pause", updatePlaying);
+    audio.addEventListener("ended",updatePlaying);
+    audio.addEventListener("error",()=>{updatePlaying();setStatus("暂时无法播放这首音乐，请检查链接或选择其他曲目。");});
     audio.addEventListener("timeupdate", () => {
         if(activeMode === "audio" && audio.duration) seek.value = String((audio.currentTime / audio.duration) * 100);
     });
@@ -542,3 +561,4 @@
         rebuildPlaylist();
     });
 })();
+

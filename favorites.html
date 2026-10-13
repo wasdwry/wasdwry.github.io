@@ -447,6 +447,7 @@ textarea{
 body{background-image:url(assets/pixel-mine-bg.webp)}
 body::before,body::after{display:none}
 </style>
+<script>if(new URLSearchParams(location.search).has("desk")&&window.parent!==window)document.documentElement.classList.add("desk-embedded");</script><link rel="stylesheet" href="assets/desk.css?v=20261013">
 </head>
 <body>
 
@@ -572,8 +573,8 @@ body::before,body::after{display:none}
     </article>
 </div>
 
-<script src="assets/dynamic-background.js?v=20261007-art2" defer></script>
-<script src="assets/music-player.js" defer></script>
+<script src="assets/dynamic-background.js?v=20261013" defer></script>
+<script src="assets/music-player.js?v=20261013" defer></script>
 <script src="assets/comments-config.js" defer></script>
 <script src="assets/comments.js" defer></script>
 <script>
@@ -1376,6 +1377,7 @@ updateCreateLink();
 loadFavorites();
 </script>
 
+<script src="assets/desk.js?v=20261013"></script>
 </body>
 </html>
 

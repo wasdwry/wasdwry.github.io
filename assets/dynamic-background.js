@@ -43,7 +43,7 @@
     document.addEventListener('keydown',event=>{if(event.key==='Escape')focusBackground(false);});
     media.addEventListener('change',()=>{paused=media.matches;updatePauseButton();restart();});
     controls.append(focusButton,pauseButton);if(!immersive)document.body.appendChild(controls);
-    window.WasdwryLandscape={get paused(){return paused;},toggle(){paused=!paused;updatePauseButton();restart();},setView(next){view=next;canvas.style.display=next==='hall'?'none':'block';const mount=next==='study'?document.getElementById('studyWindow'):document.body;mount.prepend(canvas);resize();}};
+    window.WasdwryLandscape={get daylight(){return light;},get paused(){return paused;},toggle(){paused=!paused;updatePauseButton();restart();},setView(next){view=next;canvas.style.display=next==='hall'?'none':'block';const mount=next==='study'?document.getElementById('studyWindow'):document.body;mount.prepend(canvas);resize();}};
     function updateClock(){
         const d=new Date(),minute=d.getHours()*60+d.getMinutes();if(minute===previousMinute)return;
         previousMinute=minute;const hour=minute/60;

@@ -12,8 +12,12 @@ async function changeScene(next,push=true){if(!scenes.includes(next))next='outsi
 $('enterStudy').addEventListener('click',()=>changeScene('study'));$('studyDoor').addEventListener('click',()=>changeScene('hall'));$('backScene').addEventListener('click',()=>changeScene(scene==='study'?'hall':'outside'));
 document.querySelectorAll('[data-room]').forEach(b=>b.addEventListener('click',()=>notify(b.dataset.room==='living'?'客厅留待慢慢布置，先去书房坐坐吧。':'厨房留待慢慢布置，先去书房坐坐吧。')));
 $('bookshelf').addEventListener('click',()=>shelf($('shelfMenu').hidden));
-const toolMap={write:['diary.html?desk=write','写日记'],diary:['diary.html?desk=read','日记簿'],favorites:['favorites.html?desk=read','我的收藏'],posts:['posts.html?desk=read','我的文章']};
-document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{const [url,title]=toolMap[b.dataset.tool];lastFocus=b;shelf(false);$('deskTitle').textContent=title;$('deskFrame').title=title;$('deskFrame').src=url;$('deskDialog').showModal();}));
+const toolMap={write:['diary','write','写日记'],diary:['diary','read','日记簿'],favorites:['favorites','read','我的收藏'],posts:['posts','read','我的文章']};
+let deskRequest=0;
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',async()=>{
+ const [kind,mode,title]=toolMap[b.dataset.tool],request=++deskRequest;lastFocus=b;shelf(false);$('deskTitle').textContent=title;$('deskFrame').title=title;$('deskFrame').srcdoc='<p style="padding:24px;color:#65513b">正在打开……</p>';$('deskDialog').showModal();
+ try{const {default:markup}=await import(`./desk-${kind}.js?v=20261013-modules4`);if(request!==deskRequest||!$('deskDialog').open)return;$('deskFrame').srcdoc=markup.replace('__DESK_MODE__',mode);}catch(_){if(request===deskRequest&&$('deskDialog').open)$('deskFrame').srcdoc='<p style="padding:24px;color:#65513b">暂时无法打开，请合上后重试。</p>';}
+}));
 $('closeDesk').addEventListener('click',()=>$('deskDialog').close());$('deskDialog').addEventListener('close',()=>lastFocus?.focus({preventScroll:true}));
 window.addEventListener('message',e=>{if(e.origin===location.origin&&e.source===$('deskFrame').contentWindow&&e.data==='close-desk')$('deskDialog').close();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape'||$('deskDialog').open)return;shelf(false);});

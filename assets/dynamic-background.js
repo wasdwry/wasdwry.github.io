@@ -43,7 +43,7 @@
     document.addEventListener('keydown',event=>{if(event.key==='Escape')focusBackground(false);});
     media.addEventListener('change',()=>{paused=media.matches;updatePauseButton();restart();});
     controls.append(focusButton,pauseButton);if(!immersive)document.body.appendChild(controls);
-    window.WasdwryLandscape={get daylight(){return light;},get paused(){return paused;},toggle(){paused=!paused;updatePauseButton();restart();},setView(next){view=next;canvas.style.display=next==='hall'?'none':'block';const mount=next==='study'?document.getElementById('studyWindow'):document.body;mount.prepend(canvas);resize();}};
+    window.WasdwryLandscape={get daylight(){return light;},get paused(){return paused;},toggle(){paused=!paused;updatePauseButton();restart();},setView(next){view=next;canvas.style.display=next==='outside'?'block':'none';const mount=document.body;mount.prepend(canvas);resize();}};
     function updateClock(){
         const d=new Date(),minute=d.getHours()*60+d.getMinutes();if(minute===previousMinute)return;
         previousMinute=minute;const hour=minute/60;
@@ -173,7 +173,7 @@
             gl.uniform1f(locations.time,elapsed/1000);gl.uniform1f(locations.daylight,light);gl.uniform1f(locations.warmth,warmth);gl.drawArrays(gl.TRIANGLES,0,6);
         }else if(ctx)drawFallback();
     }
-    function animate(now){frame=0;if(document.hidden||paused||contextLost||(immersive&&view==='hall'))return;if(!last)last=now;const delta=now-last;if(delta>=1000/30){elapsed+=Math.min(delta,100);last=now;draw();}frame=requestAnimationFrame(animate);}
+    function animate(now){frame=0;if(document.hidden||paused||contextLost||(immersive&&view!=='outside'))return;if(!last)last=now;const delta=now-last;if(delta>=1000/30){elapsed+=Math.min(delta,100);last=now;draw();}frame=requestAnimationFrame(animate);}
     function restart(){cancelAnimationFrame(frame);frame=0;last=0;if(document.hidden||!ready||contextLost)return;draw();if(!paused)frame=requestAnimationFrame(animate);}
     function resize(){const rect=canvas.getBoundingClientRect(),w=rect.width||innerWidth,h=rect.height||innerHeight,dpr=Math.min(devicePixelRatio||1,1.5,1920/w,1200/h);canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));restart();}
     function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('Background unavailable: '+url));image.src=url;});}

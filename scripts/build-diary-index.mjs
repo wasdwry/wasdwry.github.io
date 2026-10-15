@@ -10,7 +10,8 @@ async function files(directory) {
   return result.flat();
 }
 const entries = await Promise.all((await files(resolve(root, 'diary'))).map(async file => {
-  const markdown = await readFile(file, 'utf8');
+  // Normalize checkout line endings so Windows and the publishing runner agree.
+  const markdown = (await readFile(file, 'utf8')).replace(/\r\n?/g, '\n');
   const entry = parseDiary(markdown, relative(root, file).split(sep).join('/'));
   return { ...entry, version: createHash('sha256').update(markdown).digest('hex').slice(0, 16) };
 }));

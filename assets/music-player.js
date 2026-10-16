@@ -1,3 +1,5 @@
+import { validateMusicFile, MUSIC_EXTENSIONS } from './music-upload.mjs';
+
 (function(){
     if(new URLSearchParams(location.search).has("desk")&&window.parent!==window)return;
     const userListKey = "wasdwry-music-user-list";
@@ -23,8 +25,12 @@
         .music-panel.open{display:block}
         .music-add-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin:8px 0}
         .music-add-row input[type="url"]{min-height:34px;border:1px solid rgba(31,41,51,.14);border-radius:8px;padding:0 10px;font:inherit}
-        .music-file-label{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 12px;border:1px solid rgba(22,50,77,.2);border-radius:8px;background:white;color:#16324d;font-weight:700;cursor:pointer}
-        .music-file-label input{display:none}
+        .music-upload{margin-top:12px;padding-top:10px;border-top:1px solid #d9c69c}
+        .music-upload input[type="file"]{display:block;max-width:100%;margin:10px 0;font:inherit;font-size:12px}
+        .music-upload input::file-selector-button{border:1px solid #d9c69c;border-radius:8px;background:#fff9ed;padding:8px;color:#493d31;cursor:pointer}
+        .music-library-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+        .music-upload a{display:inline-block;font-size:12px;margin-top:6px;color:#48633e}
+        .music-upload [hidden]{display:none!important}
         .music-list{display:grid;gap:8px;max-height:220px;overflow:auto;margin-top:8px}
         .music-list-item{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px;border:1px solid rgba(31,41,51,.12);border-radius:8px;background:#fbfdff}
         .music-list-item.active{border-color:#1769aa;background:#f0f7ff}
@@ -62,13 +68,21 @@
             <div class="music-embed" id="musicEmbed"></div>
             <p class="music-status" id="musicStatus"></p>
             <div class="music-panel" id="musicPanel">
-                <p class="music-status">网站歌单会自动更新。下方添加的音乐仅保存在此浏览器，不会分享给其他访客。</p>
-                <label class="music-file-label">添加本地音乐<input id="musicFileInput" type="file" accept="audio/*" multiple></label>
+                <div class="music-library-tools"><strong>音乐列表</strong><button type="button" data-action="refresh">刷新歌单</button></div>
+                <div class="music-list" id="musicList"></div>
+                <div class="music-upload" id="musicUpload">
+                    <strong>上传音乐</strong>
+                    <p class="music-status">仅作者可上传，每首最多 10 MiB。上传的音频会公开给所有访客播放。</p>
+                    <input id="musicFileInput" type="file" accept="${MUSIC_EXTENSIONS.map(ext => '.' + ext).join(',')}" aria-label="选择要上传的音频">
+                    <button type="button" data-action="upload" disabled>上传并公开</button>
+                    <p class="music-status" id="musicUploadStatus" role="status">沿用日记的 GitHub 登录；尚未登录时会提示登录。</p>
+                    <a id="musicUploadResult" target="_blank" rel="noopener noreferrer" hidden>查看仓库中的音频</a>
+                </div>
+                <p class="music-status">添加网址仅保存在当前浏览器。</p>
                 <div class="music-add-row">
                     <input id="musicUrlInput" type="url" placeholder="粘贴音频、YouTube、Vimeo、Spotify 或网易云链接">
                     <button type="button" data-action="add-url">添加 URL</button>
                 </div>
-                <div class="music-list" id="musicList"></div>
             </div>
         </div>
     `;
@@ -87,6 +101,7 @@
     let vimeoApiReady = null;
     let embedPlayer = null;
     let embedPlaying = false;
+    let uploadFile = null, uploading = false, uploadPoll = null, uploadGeneration = 0;
 
     const title = root.querySelector(".music-title");
     const toggleButton = root.querySelector('[data-action="toggle"]');
@@ -98,6 +113,9 @@
     const statusText = root.querySelector("#musicStatus");
     const urlInput = root.querySelector("#musicUrlInput");
     const fileInput = root.querySelector("#musicFileInput");
+    const uploadButton = root.querySelector('[data-action="upload"]');
+    const uploadStatus = root.querySelector("#musicUploadStatus");
+    const uploadResult = root.querySelector("#musicUploadResult");
     const embedBox = root.querySelector("#musicEmbed");
 
     function updatePlaying(){
@@ -144,7 +162,7 @@
         renderList();
         if(!playlist.length){
             title.textContent = "音乐播放器：暂无音乐";
-            setStatus("网站暂未收录音乐。可从列表里添加仅本机保存的音乐。");
+            setStatus("网站暂未收录音乐，作者可在列表中上传。");
         }
     }
 
@@ -154,16 +172,6 @@
             request.onupgradeneeded = () => request.result.createObjectStore(storeName);
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
-        });
-    }
-
-    async function idbPut(id, blob){
-        const db = await openDb();
-        return new Promise((resolve,reject) => {
-            const tx = db.transaction(storeName, "readwrite");
-            tx.objectStore(storeName).put(blob, id);
-            tx.oncomplete = resolve;
-            tx.onerror = () => reject(tx.error);
         });
     }
 
@@ -269,7 +277,7 @@
 
     function renderList(){
         if(!playlist.length){
-            list.innerHTML = `<div class="music-status">列表为空。添加本地音乐或 URL 后会出现在这里。</div>`;
+            list.innerHTML = `<div class="music-status">歌单还没有音乐。音频上传并发布后会自动出现在这里。</div>`;
             return;
         }
         list.innerHTML = playlist.map((track,index) => `
@@ -425,22 +433,6 @@
         }
     }
 
-    async function addLocalFiles(files){
-        const accepted = [...files].filter(file => file.type.startsWith("audio/") || supportedAudio.includes(file.name.split(".").pop().toLowerCase()));
-        if(!accepted.length){
-            setStatus("请选择音频文件。");
-            return;
-        }
-        for(const file of accepted){
-            const dbId = uid("file");
-            await idbPut(dbId, file);
-            userTracks.push({ id:uid("local"), source:"local", type:"audio", title:file.name.replace(/\.[^.]+$/,""), artist:"本地文件", dbId, user:true });
-        }
-        saveUserTracks();
-        rebuildPlaylist();
-        setStatus("本地音乐已添加。");
-    }
-
     async function testAudioUrl(track){
         return new Promise(resolve => {
             const probe = new Audio();
@@ -518,6 +510,14 @@
             addUrl();
             return;
         }
+        if(action === "upload"){
+            uploadMusic();
+            return;
+        }
+        if(action === "refresh"){
+            refreshRepositoryPlaylist().then(() => setStatus("歌单已更新。")).catch(() => setStatus("暂时未能刷新歌单，请稍后重试。"));
+            return;
+        }
         if(action === "select"){
             loadTrack(Number(event.target.dataset.index), true);
             return;
@@ -536,8 +536,17 @@
     });
 
     fileInput.addEventListener("change", event => {
-        addLocalFiles(event.target.files);
-        event.target.value = "";
+        uploadFile = null;
+        const file = event.target.files[0];
+        uploadResult.hidden = true;
+        if(file){
+            try{
+                validateMusicFile(file.name, file.size);
+                uploadFile = file;
+                uploadStatus.textContent = `已选择：${file.name}（${(file.size / 1024 / 1024).toFixed(1)} MiB）。点击“上传并公开”开始。`;
+            }catch(error){ uploadStatus.textContent = error.message; }
+        }else uploadStatus.textContent = "请选择要上传的音频。";
+        uploadButton.disabled = !uploadFile || uploading;
     });
     seek.addEventListener("input", () => {
         if(activeMode === "audio" && audio.duration) audio.currentTime = audio.duration * Number(seek.value) / 100;
@@ -554,28 +563,89 @@
     });
     audio.addEventListener("ended", () => loadTrack(current + 1, true));
 
+    function repositoryTracks(data){
+        if(!Array.isArray(data)) throw new Error("Invalid playlist");
+        return data.filter(track => track && typeof track.src === "string" && track.src).map(track => ({
+            id:`default-${track.src}`, source:"default", type:"audio",
+            title:track.title || "未命名音乐", artist:track.artist || "", src:track.src, user:false
+        }));
+    }
+    async function readRepositoryPlaylist(refresh = false){
+        const response = await fetch("assets/music/playlist.json" + (refresh ? `?updated=${Date.now()}` : ""), { cache:"no-cache", signal:AbortSignal.timeout(10000) });
+        if(!response.ok) throw new Error("Playlist unavailable");
+        return repositoryTracks(await response.json());
+    }
+    async function refreshRepositoryPlaylist(){
+        const tracks = await readRepositoryPlaylist(true);
+        const activeId = playlist[current]?.id;
+        defaultTracks = tracks;
+        playlist = [...defaultTracks, ...userTracks];
+        const preserved = playlist.findIndex(track => track.id === activeId);
+        current = Math.max(0, preserved);
+        rebuildPlaylist();
+        if(preserved >= 0) setControlsForTrack(playlist[current]);
+        if(preserved < 0){
+            if(playlist.length) await loadTrack(0, false);
+            else { audio.pause(); stopEmbed(); }
+        }
+        return tracks;
+    }
+    async function waitForPublishedMusic(path, generation, attempts = 0){
+        if(generation !== uploadGeneration) return;
+        try{
+            const tracks = await refreshRepositoryPlaylist();
+            if(generation !== uploadGeneration) return;
+            if(tracks.some(track => {
+                try { return decodeURIComponent(new URL(track.src, location.href).pathname) === '/' + path; } catch { return false; }
+            })){
+                uploadStatus.textContent = "音乐已发布，并加入网站歌单。所有访客现在都能播放。";
+                return;
+            }
+        }catch{}
+        if(generation !== uploadGeneration) return;
+        if(attempts >= 19){
+            uploadStatus.textContent = "音频已提交到仓库，网站尚未完成更新。稍后点击“刷新歌单”查看，也可从下方链接确认文件。";
+            return;
+        }
+        uploadPoll = setTimeout(() => waitForPublishedMusic(path, generation, attempts + 1), 15000);
+    }
+    async function uploadMusic(){
+        if(uploading || !uploadFile) return;
+        const publisher = window.WasdwryDiaryPublisher;
+        if(typeof publisher?.uploadMusic !== "function"){
+            uploadStatus.textContent = "上传登录模块暂未就绪，请稍后刷新页面重试。";
+            return;
+        }
+        uploading = true; uploadButton.disabled = true; fileInput.disabled = true;
+        root.querySelector('#musicUpload').setAttribute('aria-busy', 'true');
+        clearTimeout(uploadPoll); const generation = ++uploadGeneration;
+        uploadResult.hidden = true;
+        uploadStatus.textContent = "正在连接作者登录并上传音频，请在弹出窗口中继续。";
+        try{
+            // Opens the existing first-party login bridge synchronously in this click.
+            const result = await publisher.uploadMusic(uploadFile);
+            uploadResult.href = result.fileUrl; uploadResult.hidden = false;
+            uploadStatus.textContent = result.alreadyPublished ? "仓库中已有这首音频，正在检查网站歌单…" : "音频已提交到仓库，正在等待网站自动发布…";
+            uploadFile = null; fileInput.value = "";
+            waitForPublishedMusic(result.path, generation);
+        }catch(error){
+            uploadStatus.textContent = error.message || "上传未完成，所选文件仍保留，请重试。";
+        }finally{
+            uploading = false; fileInput.disabled = false; uploadButton.disabled = !uploadFile;
+            root.querySelector('#musicUpload').setAttribute('aria-busy', 'false');
+        }
+    }
+
     async function initialisePlaylist(){
         loadUserTracks();
         let data = [], loadFailed = false;
         try{
-            // Revalidate on every visit so newly published uploads appear without a hard refresh.
-            const response = await fetch("assets/music/playlist.json", { cache:"no-cache" });
-            if(!response.ok) throw new Error("Playlist unavailable");
-            data = await response.json();
-            if(!Array.isArray(data)) throw new Error("Invalid playlist");
+            data = await readRepositoryPlaylist();
         }catch(error){
             data = [];
             loadFailed = true;
         }
-        defaultTracks = data.filter(track => track && typeof track.src === "string" && track.src).map(track => ({
-            id:`default-${track.src}`,
-            source:"default",
-            type:"audio",
-            title:track.title || "未命名音乐",
-            artist:track.artist || "",
-            src:track.src,
-            user:false
-        }));
+        defaultTracks = data;
         rebuildPlaylist();
         if(playlist.length) await loadTrack(0, false);
         if(loadFailed) setStatus("网站歌单暂时未能加载，请稍后刷新重试。本机音乐仍可使用。");

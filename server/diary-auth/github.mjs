@@ -1,5 +1,6 @@
 import { prepareDiary } from '../../assets/diary-publish.mjs';
 import { appJWT } from './crypto.mjs';
+import { validateMusicFile, validateMusicBytes, musicFileUrl } from '../../assets/music-upload.mjs';
 
 const REPO = 'wasdwry/wasdwry.github.io';
 export class PublicError extends Error {
@@ -7,22 +8,22 @@ export class PublicError extends Error {
 }
 export function createGitHub(fetchImpl, now) {
   let cached, inflight;
-  async function request(url, token, method = 'GET', body) {
+  async function request(url, token, method = 'GET', body, accept = 'application/vnd.github+json') {
     let response;
     try {
       response = await fetchImpl(url, {
         // Workers supports manual/follow; reject 3xx below without forwarding credentials.
-        method, redirect: 'manual', signal: AbortSignal.timeout(20000),
-        headers: { Accept: url.startsWith('https://github.com/') ? 'application/json' : 'application/vnd.github+json', 'User-Agent': 'wasdwry-diary-auth',
+        method, redirect: 'manual', signal: AbortSignal.timeout(method === 'PUT' ? 90000 : 20000),
+        headers: { Accept: url.startsWith('https://github.com/') ? 'application/json' : accept, 'User-Agent': 'wasdwry-diary-auth',
           'X-GitHub-Api-Version': '2022-11-28', ...(token ? { Authorization: 'Bearer ' + token } : {}),
           ...(body ? { 'Content-Type': 'application/json' } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {})
       });
-    } catch { throw new PublicError('GitHub 暂时无法连接，草稿仍保留，请稍后重试。', 502); }
+    } catch { throw new PublicError('GitHub 暂时无法连接，请稍后重试。', 502); }
     if (response.status === 404 && method === 'GET') return null;
     if (!response.ok) {
       if (response.status === 401) cached = null;
-      throw new PublicError('GitHub 未完成操作，请检查应用授权或稍后重试。已有日记不会被覆盖。', 502);
+      throw new PublicError('GitHub 未完成操作，请检查应用授权或稍后重试。已有文件不会被覆盖。', 502);
     }
     return response.json();
   }
@@ -51,6 +52,45 @@ export function createGitHub(fetchImpl, now) {
       if (typeof data.access_token !== 'string') throw new PublicError('GitHub 登录未完成，请重新登录。', 401);
       // OAuth tokens are only used for identity verification, never sent to the browser or stored.
       return request('https://api.github.com/user', data.access_token);
+    },
+    async uploadMusic(env, name, bytes) {
+      let file;
+      try { file = validateMusicFile(name, bytes.length); validateMusicBytes(file.extension, bytes); }
+      catch (error) { throw new PublicError(error.message); }
+      // Git's blob SHA checks retries without downloading >1 MiB audio from the Contents API.
+      const header = new TextEncoder().encode(`blob ${bytes.length}\0`);
+      let blob = new Uint8Array(header.length + bytes.length);
+      blob.set(header); blob.set(bytes, header.length);
+      const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-1', blob)), byte => byte.toString(16).padStart(2, '0')).join('');
+      blob = null;
+      const path = `assets/music/uploads/${sha}/${file.name}`;
+      const token = await installationToken(env);
+      const endpoint = 'https://api.github.com/repos/' + REPO + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+      const result = (alreadyPublished, commit = null) => ({ path, alreadyPublished, fileUrl: musicFileUrl(path),
+        commitUrl: commit ? 'https://github.com/' + REPO + '/commit/' + commit : null });
+      async function existing() {
+        const saved = await request(endpoint + '?ref=main', token, 'GET', undefined, 'application/vnd.github.object+json');
+        if (!saved) return null;
+        if (saved.type !== 'file' || saved.sha !== sha || saved.size !== bytes.length) throw new PublicError('同路径已有不同文件，本次没有覆盖它。', 409);
+        return result(true);
+      }
+      const found = await existing();
+      if (found) return found;
+      // Prefer native encoding; the bounded fallback also works in older local runtimes.
+      const base64 = () => {
+        if (typeof bytes.toBase64 === 'function') return bytes.toBase64();
+        const chunks = [];
+        for (let i = 0; i < bytes.length; i += 24576) chunks.push(btoa(String.fromCharCode(...bytes.subarray(i, i + 24576))));
+        return chunks.join('');
+      };
+      try {
+        const saved = await request(endpoint, token, 'PUT', { message: 'Add music: ' + file.title, branch: 'main', content: base64() });
+        if (saved.content?.path !== path || saved.content?.sha !== sha || !/^[a-f0-9]{40}$/.test(saved.commit?.sha)) throw new Error('Unconfirmed upload');
+        return result(false, saved.commit.sha);
+      } catch {
+        try { const recovered = await existing(); if (recovered) return recovered; } catch {}
+        throw new PublicError('尚未确认音频上传结果，请重试。系统会先核对仓库，避免重复上传。', 502);
+      }
     },
     async publish(env, date, content) {
       let draft;

@@ -1,6 +1,6 @@
 # 日记持久登录后台
 
-网站仍由 GitHub Pages 托管。这个独立的 Cloudflare Worker 负责作者登录与日记提交，D1 只保存登录会话和短期登录校验信息。日记仍写入 `wasdwry/wasdwry.github.io` 的 `main` 分支。
+网站仍由 GitHub Pages 托管。这个独立的 Cloudflare Worker 负责作者登录、日记提交和音乐上传，D1 只保存登录会话和短期登录校验信息。内容仍写入 `wasdwry/wasdwry.github.io` 的 `main` 分支。
 
 **当前启用状态**：查看仓库中的 `assets/publishing-config.mjs`。`backendOrigin` 为空时仍使用原来的临时令牌连接；只有完成以下配置、验证成功并填入真实地址后，网站才启用后台登录。提交这些代码本身不会创建 Cloudflare 服务。
 
@@ -11,6 +11,8 @@
 - 点击“退出这台设备的登录”立即撤销当前会话。其他设备的登录不受影响。
 - 清除 Cookie、使用隐私窗口、更换浏览器或登录到期后需要重新登录。部分浏览器在 GitHub 授权后会切断窗口联系；页面会提示返回书桌再点一次发布。
 - 页面关闭后不会自行发布尚未提交的草稿。每篇日记仍需要作者点击发布；本机草稿始终保留。
+- 音乐播放器提供“选择音频 → 上传并公开”，复用同一个登录会话。每次上传一首、最多 10 MiB；支持 MP3、OGG、WAV、M4A、AAC、FLAC、OPUS。后台检查文件名、大小及音频格式标识，只新增 `assets/music/uploads/内容摘要/文件名`，不接受客户端指定仓库或任意路径。
+- 上传成功只代表仓库已保存，播放器会继续等待 Pages 发布并刷新歌单。请求中断可重试，后台通过 Git blob 摘要核对已存在文件，包含 GitHub 不返回完整正文的较大音频；不覆盖已有文件。
 
 ## 一次性配置
 
@@ -97,8 +99,8 @@ npm run deploy
 
 - 浏览器只持有 `Secure`、`HttpOnly`、`SameSite=Lax` 的会话 Cookie。D1 保存 Cookie 的散列值，不保存 GitHub 凭据、日记正文或原始会话 ID。
 - GitHub App 私钥及 Client secret 保存在 Worker Secrets。登录时的 OAuth token 只用于验证身份；发布使用限制到本站仓库、只授予 Contents 写入的短期安装令牌，过期后后台自动重新取得。
-- 后台只接受固定作者 ID `73155150` 和账号 `wasdwry`。发布接口只能新增 `diary/` 下的 Markdown，不支持任意仓库、路径、覆盖或删除。
-- GitHub App 的仓库级 Contents 权限本身不能限制到 `diary/` 目录；目录限制由本服务实现。因此仍需保护 Cloudflare 账户和应用私钥。
+- 后台只接受固定作者 ID `73155150` 和账号 `wasdwry`。日记接口只能新增 `diary/` 下的 Markdown，音乐接口只能新增 `assets/music/uploads/` 下的音频；不支持任意仓库、路径、覆盖或删除。
+- GitHub App 的仓库级 Contents 权限本身不能限制到这些目录；目录限制由本服务实现。因此仍需保护 Cloudflare 账户和应用私钥。
 - OAuth 校验包含浏览器 Cookie、一次性 state 和 PKCE；写入要求同源请求与 CSRF 校验。跨窗口通信严格验证来源、窗口和随机编号。
 - 每日清理过期会话。若需撤销所有设备，可在 D1 控制台执行 `DELETE FROM sessions;`；若需停止全部仓库写入，在 GitHub 卸载该应用。GitHub 取消用户 OAuth 授权不等于删除本服务已建立的会话，应同时退出或清除 D1 会话。
 - 不开启请求正文日志。当前 Worker 的可观测日志默认关闭，代码不记录密钥或授权码。密钥文件、`.dev.vars`、本地配置、依赖和构建缓存已被 Git 忽略。

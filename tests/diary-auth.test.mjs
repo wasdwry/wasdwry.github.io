@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { generateKeyPairSync, createVerify } from 'node:crypto';
+import { generateKeyPairSync, createVerify, createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createWorker } from '../server/diary-auth/worker.mjs';
 import { createGitHub } from '../server/diary-auth/github.mjs';
 import { appJWT, digest } from '../server/diary-auth/crypto.mjs';
+import { MAX_MUSIC_BYTES } from '../assets/music-upload.mjs';
 
 const ORIGIN = 'https://diary.test', CHANNEL = 'x'.repeat(43);
 const keys = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -34,15 +35,18 @@ function fixture() {
       assert.deepEqual(JSON.parse(options.body), { repositories: ['wasdwry.github.io'], permissions: { contents: 'write' } });
       return response({ token: 'fake-install-token', expires_at: new Date((clock + 3600) * 1000).toISOString() });
     }
-    const path = new URL(url).pathname.split('/contents/')[1];
-    assert.ok(path?.startsWith('diary/')); assert.ok(url.startsWith('https://api.github.com/repos/wasdwry/wasdwry.github.io/'));
+    const path = decodeURIComponent(new URL(url).pathname.split('/contents/')[1]);
+    assert.ok(path?.startsWith('diary/') || path?.startsWith('assets/music/uploads/')); assert.ok(url.startsWith('https://api.github.com/repos/wasdwry/wasdwry.github.io/'));
+    if (path.startsWith('assets/music/') && options.method === 'GET') assert.equal(options.headers.Accept, 'application/vnd.github.object+json');
     if (options.method === 'GET') return files.has(path) ? response(files.get(path)) : response({}, 404);
     assert.equal(options.method, 'PUT');
     if (denyWrite) return response({}, 403);
     const body = JSON.parse(options.body); assert.equal(body.branch, 'main'); assert.equal(body.sha, undefined);
-    writes++; files.set(path, { type: 'file', encoding: 'base64', content: body.content });
+    const bytes = Buffer.from(body.content, 'base64');
+    const sha = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+    writes++; files.set(path, { type: 'file', sha, size: bytes.length, encoding: bytes.length > 1024 * 1024 ? 'none' : 'base64', content: bytes.length > 1024 * 1024 ? '' : body.content });
     if (loseResponse) { loseResponse = false; throw new Error('Lost response'); }
-    return response({ content: { path }, commit: { sha: 'a'.repeat(40) } });
+    return response({ content: { path, sha }, commit: { sha: 'a'.repeat(40) } });
   } });
   const fetch = (path, options) => worker.fetch(new Request(ORIGIN + path, options), env);
   const start = async () => {
@@ -70,6 +74,66 @@ test('GitHub RSA key formats produce verifiable short-lived JWTs', async () => {
     assert.equal(createVerify('RSA-SHA256').update(header + '.' + payload).verify(keys.publicKey, Buffer.from(signature, 'base64url')), true);
     assert.deepEqual(JSON.parse(Buffer.from(payload, 'base64url')), { iat: 1799999940, exp: 1800000540, iss: 'Iv1.test' });
   }
+});
+
+const audioFixture = (length = 64) => {
+  const bytes = new Uint8Array(length);
+  bytes.set(new TextEncoder().encode('RIFF0000WAVE'));
+  return bytes;
+};
+const musicPost = (f, auth, name, bytes, headers = {}) => f.fetch('/music/upload', {
+  method: 'POST', headers: { Origin: ORIGIN, Cookie: auth.cookie, 'X-Diary-CSRF': auth.session.csrf,
+    'Content-Type': 'application/octet-stream', 'X-Music-Filename': encodeURIComponent(name), ...headers }, body: bytes
+});
+
+test('music uploads require the owner session and CSRF, and reject paths, wrong formats and oversized bodies before GitHub access', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); const auth = await f.login();
+  const before = f.calls.length;
+  assert.equal((await f.fetch('/music/upload', { method: 'POST', headers: { Origin: ORIGIN } })).status, 401);
+  for (const headers of [{ Origin: 'https://attacker.test' }, { 'X-Diary-CSRF': '' }]) {
+    assert.equal((await musicPost(f, auth, 'music.wav', audioFixture(), headers)).status, 403);
+  }
+  for (const name of ['../../index.html.wav', 'folder\\music.wav', 'index.html', '', '.wav']) {
+    assert.equal((await musicPost(f, auth, name, audioFixture())).status, 400);
+  }
+  assert.equal((await musicPost(f, auth, 'music.wav', new TextEncoder().encode('<html>not audio</html>'))).status, 400);
+  assert.equal((await musicPost(f, auth, 'music.wav', new Uint8Array())).status, 400);
+  assert.equal((await musicPost(f, auth, 'music.wav', audioFixture(), { 'Content-Type': 'text/html' })).status, 415);
+  assert.equal((await musicPost(f, auth, 'music.wav', audioFixture(), { 'Content-Length': String(MAX_MUSIC_BYTES + 1) })).status, 413);
+  assert.equal((await musicPost(f, auth, 'music.wav', audioFixture(MAX_MUSIC_BYTES + 1))).status, 413);
+  assert.equal(f.calls.length, before); assert.equal(f.writes, 0);
+});
+
+test('audio larger than 1 MiB uploads byte-for-byte and retries use blob metadata without overwriting', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); const auth = await f.login();
+  const bytes = audioFixture(1024 * 1024 + 17); bytes[50] = 239;
+  const first = await (await musicPost(f, auth, '海风 #1.WAV', bytes)).json();
+  assert.equal(first.alreadyPublished, false); assert.equal(f.writes, 1);
+  assert.match(first.path, /^assets\/music\/uploads\/[a-f0-9]{40}\/海风 #1\.wav$/);
+  const put = f.calls.find(call => call.options.method === 'PUT');
+  assert.deepEqual(Buffer.from(JSON.parse(put.options.body).content, 'base64'), Buffer.from(bytes));
+  assert.equal(new URL(first.fileUrl).hash, '');
+  assert.equal(f.files.get(first.path).encoding, 'none');
+  const retry = await (await musicPost(f, auth, '海风 #1.WAV', bytes)).json();
+  assert.equal(retry.alreadyPublished, true); assert.equal(f.writes, 1);
+  f.files.get(first.path).sha = '0'.repeat(40);
+  assert.equal((await musicPost(f, auth, '海风 #1.WAV', bytes)).status, 409);
+  assert.equal(f.writes, 1);
+  assert.doesNotMatch(JSON.stringify(first), /fake-install-token|fake-client-secret|PRIVATE KEY/);
+});
+
+test('audio retries recover lost responses and same-name different audio gets its own file', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); const auth = await f.login();
+  f.loseResponse();
+  const first = await (await musicPost(f, auth, 'music.wav', audioFixture())).json();
+  assert.equal(first.alreadyPublished, true); assert.equal(f.writes, 1);
+  const different = audioFixture(); different[20] = 1;
+  const second = await (await musicPost(f, auth, 'music.wav', different)).json();
+  assert.notEqual(first.path, second.path); assert.equal(f.writes, 2);
+  f.denyWrite(); different[21] = 2;
+  const failed = await musicPost(f, auth, 'music.wav', different);
+  assert.equal(failed.status, 502); assert.match((await failed.json()).error, /重试/);
+  assert.equal(f.writes, 2);
 });
 
 test('GitHub redirects are rejected without forwarding login credentials', async () => {

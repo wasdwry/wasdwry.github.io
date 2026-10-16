@@ -7,7 +7,7 @@ $('close').onclick = () => window.close();
 function say(title, message) { $('title').textContent = title; $('status').textContent = message; }
 function send(type, data = {}) { openerWindow?.postMessage({ type, channel, ...data }, SITE_ORIGIN); }
 async function request(path, options = {}) {
-  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(90000), ...options });
+  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(120000), ...options });
   const data = await response.json();
   if (!response.ok) { const error = new Error(data.error || '登录已过期，请重新登录。'); error.status = response.status; throw error; }
   return data;
@@ -26,9 +26,14 @@ async function execute(action, payload) {
     if (action === 'publish') {
       say('正在发布日记…', '提交成功后，网站会自动更新。请稍候。');
       result = await request('/publish', { ...options, body: JSON.stringify({ date: payload.date, content: payload.content }) });
+    } else if (action === 'uploadMusic') {
+      say('正在上传音乐…', '音频将公开到网站歌单。提交后还需等待网站自动发布，请保留此窗口。');
+      result = await request('/music/upload', { method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Diary-CSRF': session.csrf, 'X-Music-Filename': encodeURIComponent(payload.file.name) },
+        body: payload.file });
     } else if (action === 'logout') result = await request('/logout', options);
     else result = { connected: true, login: session.login };
-    say(action === 'publish' ? '日记已提交' : action === 'logout' ? '已退出登录' : '登录成功', '可以关闭此窗口，返回书桌。');
+    say(action === 'publish' ? '日记已提交' : action === 'uploadMusic' ? '音乐已提交' : action === 'logout' ? '已退出登录' : '登录成功', '可以关闭此窗口，返回网站。');
     $('close').hidden = false;
     send('diary-auth:result', { ok: true, result });
     setTimeout(() => window.close(), 800);
@@ -40,19 +45,20 @@ async function execute(action, payload) {
 window.addEventListener('message', event => {
   const data = event.data;
   if (started || event.origin !== SITE_ORIGIN || event.source !== openerWindow || !openerWindow || data?.type !== 'diary-auth:request' || data.channel !== channel) return;
-  if (!['connect', 'publish', 'logout'].includes(data.action)) return;
+  if (!['connect', 'publish', 'logout', 'uploadMusic'].includes(data.action)) return;
   if (data.action === 'publish' && (typeof data.payload?.date !== 'string' || typeof data.payload?.content !== 'string')) return;
+  if (data.action === 'uploadMusic' && (!(data.payload?.file instanceof Blob) || typeof data.payload.file.name !== 'string' || !data.payload.file.size || data.payload.file.size > 10 * 1024 * 1024)) return;
   started = true; execute(data.action, data.payload);
 });
 if (!/^[A-Za-z0-9_-]{43}$/.test(channel)) {
-  say('请从书桌进入', '请回到个人网站，打开书桌，再点击登录或发布。');
+  say('请从网站进入', '请回到个人网站，从书桌或音乐播放器打开登录窗口。');
 } else if (!openerWindow) {
   // GitHub/browser isolation can sever window.opener during OAuth. The first-party
   // session still persists; reopening from the desk completes the original action.
-  request('/session').then(() => say('登录成功', '浏览器已保存登录。请关闭此窗口，回到书桌再次点击发布即可，无需重新授权。'))
-    .catch(() => say('请返回书桌重试', '请关闭此窗口，回到书桌再次点击登录或发布。'));
+  request('/session').then(() => say('登录成功', '浏览器已保存登录。请关闭此窗口，回到网站再次点击发布或上传即可，无需重新授权。'))
+    .catch(() => say('请返回网站重试', '请关闭此窗口，回到网站再次点击登录、发布或上传。'));
   $('close').hidden = false;
 } else {
   send('diary-auth:ready');
-  setTimeout(() => { if (!started) { say('请返回书桌重试', '原来的页面可能已关闭或刷新。请重新打开发布窗口；已保存的登录仍然有效。'); $('close').hidden = false; } }, 10000);
+  setTimeout(() => { if (!started) { say('请返回网站重试', '原来的页面可能已关闭或刷新。请重新打开操作窗口；已保存的登录仍然有效。'); $('close').hidden = false; } }, 10000);
 }

@@ -1,5 +1,6 @@
 import { random, digest } from './crypto.mjs';
 import { createGitHub, PublicError } from './github.mjs';
+import { MAX_MUSIC_BYTES } from '../../assets/music-upload.mjs';
 
 const OWNER_ID = 73155150, OWNER = 'wasdwry';
 const SESSION = '__Host-diary-session', LOGIN = '__Host-diary-login';
@@ -40,6 +41,23 @@ async function readJSON(request) {
   const buffer = new Uint8Array(length); let offset = 0;
   for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.length; }
   try { return JSON.parse(new TextDecoder().decode(buffer)); } catch { throw new PublicError('请求格式无效。'); }
+}
+
+async function readAudio(request) {
+  if (request.headers.get('Content-Type') !== 'application/octet-stream') throw new PublicError('请使用音频上传入口。', 415);
+  if (Number(request.headers.get('Content-Length')) > MAX_MUSIC_BYTES) throw new PublicError('每首音频最多 10 MiB。', 413);
+  const reader = request.body?.getReader();
+  if (!reader) throw new PublicError('缺少音频文件。');
+  const chunks = []; let length = 0;
+  for (;;) {
+    const { value, done } = await reader.read(); if (done) break;
+    length += value.length;
+    if (length > MAX_MUSIC_BYTES) { await reader.cancel(); throw new PublicError('每首音频最多 10 MiB。', 413); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(length); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  return bytes;
 }
 
 export function createWorker({ fetchImpl = globalThis.fetch.bind(globalThis), now = () => Math.floor(Date.now() / 1000) } = {}) {
@@ -101,7 +119,7 @@ export function createWorker({ fetchImpl = globalThis.fetch.bind(globalThis), no
       const current = await session(request, env);
       return current ? json({ authenticated: true, login: current.login, csrf: current.csrf, expiresAt: current.expires_at }) : json({ authenticated: false }, 401);
     }
-    if (['/publish', '/logout'].includes(path) && request.method === 'POST') {
+    if (['/publish', '/logout', '/music/upload'].includes(path) && request.method === 'POST') {
       // All API requests originate in the first-party popup. No cross-site cookie access or CORS is needed.
       if (request.headers.get('Origin') !== env.PUBLIC_ORIGIN) throw new PublicError('请求来源无效。', 403);
       const current = await session(request, env);
@@ -113,6 +131,12 @@ export function createWorker({ fetchImpl = globalThis.fetch.bind(globalThis), no
       if (path === '/logout') {
         await env.DB.prepare('DELETE FROM sessions WHERE id_hash = ?').bind(current.id_hash).run();
         return new Response(JSON.stringify({ authenticated: false }), { headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookie(SESSION, '', 0) } });
+      }
+      if (path === '/music/upload') {
+        let name;
+        try { name = decodeURIComponent(request.headers.get('X-Music-Filename') || ''); }
+        catch { throw new PublicError('音频文件名无效。'); }
+        return json(await github.uploadMusic(env, name, await readAudio(request)));
       }
       const data = await readJSON(request);
       if (!data || Object.keys(data).some(key => !['date', 'content'].includes(key))) throw new PublicError('仅支持提交日记日期与正文。');

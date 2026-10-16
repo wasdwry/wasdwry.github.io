@@ -58,13 +58,13 @@ test('blocked or closed popup, timeout, malformed results and navigation fail wi
   action = publisher.connect(); publisher.dispose(); await assert.rejects(action, /页面已离开/);
   assert.equal(publisher.status().busy, false);
 });
-function bridgeFixture({ authenticated = true, opener = true, failPublish = false } = {}) {
+function bridgeFixture({ authenticated = true, opener = true, failPublish = false, action = 'publish', payload = { date: '2026-10-16T12:30', content: '正文' } } = {}) {
   const nodes = new Map(), messages = [], requests = []; let listener;
   const parent = { postMessage(data, origin) { messages.push({ data, origin }); } };
   const context = {
     location: { hash: '#' + 'x'.repeat(43) }, window: { opener: opener ? parent : null, close() {}, addEventListener(type, fn) { if (type === 'message') listener = fn; } },
     document: { getElementById(id) { if (!nodes.has(id)) nodes.set(id, { hidden: true }); return nodes.get(id); } },
-    setTimeout() {}, AbortSignal, URL, encodeURIComponent,
+    setTimeout() {}, AbortSignal, URL, encodeURIComponent, Blob,
     fetch: async (path, options) => {
       requests.push({ path, options });
       if (path === '/session') return Response.json(authenticated ? { login: 'wasdwry', csrf: 'csrf-value' } : { authenticated: false }, { status: authenticated ? 200 : 401 });
@@ -73,12 +73,19 @@ function bridgeFixture({ authenticated = true, opener = true, failPublish = fals
         assert.deepEqual(JSON.parse(options.body), { date: '2026-10-16T12:30', content: '正文' });
         return Response.json(failPublish ? { error: '模拟提交失败，草稿仍保留' } : saved, { status: failPublish ? 502 : 200 });
       }
+      if (path === '/music/upload') {
+        assert.equal(options.headers['X-Diary-CSRF'], 'csrf-value');
+        assert.equal(options.headers['Content-Type'], 'application/octet-stream');
+        assert.equal(decodeURIComponent(options.headers['X-Music-Filename']), payload.file.name);
+        assert.equal(options.body, payload.file);
+        return Response.json(musicSaved);
+      }
       return Response.json({ authenticated: false });
     }
   };
   vm.runInNewContext(readFileSync(new URL('../server/diary-auth/public/bridge.js', import.meta.url), 'utf8'), context);
   return { nodes, requests, messages,
-    emit(origin = SITE, source = parent, channel = 'x'.repeat(43)) { listener({ origin, source, data: { type: 'diary-auth:request', channel, action: 'publish', payload: { date: '2026-10-16T12:30', content: '正文' } } }); } };
+    emit(origin = SITE, source = parent, channel = 'x'.repeat(43)) { listener({ origin, source, data: { type: 'diary-auth:request', channel, action, payload } }); } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 test('first-party bridge restores cookie session and only accepts the original site window', async () => {
@@ -90,6 +97,39 @@ test('first-party bridge restores cookie session and only accepts the original s
   assert.equal(f.messages.at(-1).data.ok, true); assert.equal(f.messages.at(-1).origin, SITE);
   assert.equal(JSON.stringify(f.messages).includes('csrf-value'), false);
   f.emit(); await settle(); assert.equal(f.requests.length, 2);
+});
+
+const musicSaved = { path: 'assets/music/uploads/' + 'b'.repeat(40) + '/海风.wav', alreadyPublished: false };
+musicSaved.fileUrl = 'https://github.com/wasdwry/wasdwry.github.io/blob/main/' + musicSaved.path.split('/').map(encodeURIComponent).join('/');
+
+test('music uses the existing popup session, validates result paths, and never sends a file to an untrusted window', async () => {
+  const f = browserFixture(), publisher = createServerPublisher(ORIGIN, f.browser);
+  const file = new File(['RIFF0000WAVEdata'], '海风.wav', { type: 'audio/wav' });
+  let pending = publisher.uploadMusic(file);
+  f.emit({ type: 'diary-auth:ready' }, 'https://attacker.test');
+  f.emit({ type: 'diary-auth:ready' }, ORIGIN, {});
+  assert.equal(f.sent.length, 0);
+  f.emit({ type: 'diary-auth:ready' });
+  assert.equal(f.sent[0].data.action, 'uploadMusic'); assert.equal(f.sent[0].data.payload.file, file);
+  f.emit({ type: 'diary-auth:result', ok: true, result: musicSaved });
+  assert.deepEqual(await pending, musicSaved);
+  pending = publisher.uploadMusic(file);
+  f.emit({ type: 'diary-auth:result', ok: true, result: { ...musicSaved, path: 'index.html' } });
+  await assert.rejects(pending, /结果格式/);
+  await assert.rejects(publisher.uploadMusic(new File(['code'], 'code.html')), /请选择/);
+  assert.equal(publisher.status().busy, false);
+});
+
+test('music bridge sends raw audio only after authentication and does not include credentials in its result', async () => {
+  const payload = { file: new File(['RIFF0000WAVEdata'], '海风.wav', { type: 'audio/wav' }) };
+  const f = bridgeFixture({ action: 'uploadMusic', payload });
+  f.emit(); await settle();
+  assert.deepEqual(f.requests.map(request => request.path), ['/session', '/music/upload']);
+  assert.deepEqual(f.messages.at(-1).data.result, musicSaved);
+  assert.equal(JSON.stringify(f.messages).includes('csrf-value'), false);
+  const missing = bridgeFixture({ authenticated: false, action: 'uploadMusic', payload });
+  missing.emit(); await settle();
+  assert.equal(missing.requests.length, 1); assert.equal(missing.nodes.get('login').hidden, false);
 });
 test('bridge prompts login for missing session, reports failures, handles lost opener after OAuth', async () => {
   const missing = bridgeFixture({ authenticated: false }); missing.emit(); await settle();

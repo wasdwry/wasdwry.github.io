@@ -1,5 +1,6 @@
 // A first-party popup keeps the session usable when browsers block third-party cookies.
 // Only drafts and public results cross windows. GitHub credentials never reach this page.
+import { validateMusicFile, isMusicUploadResult } from './music-upload.mjs';
 export function createServerPublisher(backendOrigin, browser = window) {
   const url = new URL(backendOrigin);
   if (url.protocol !== 'https:' || url.origin !== backendOrigin) throw new Error('发布后台地址必须是完整的 HTTPS 来源地址，不含路径。');
@@ -13,7 +14,7 @@ export function createServerPublisher(backendOrigin, browser = window) {
     const channel = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     // Open synchronously within the click handler, before any asynchronous work.
     const popup = browser.open(backendOrigin + '/#' + channel, '_blank', 'popup,width=520,height=640');
-    if (!popup) return Promise.reject(new Error('浏览器拦截了登录窗口，请允许本站弹出窗口后再试。草稿仍保留。'));
+    if (!popup) return Promise.reject(new Error('浏览器拦截了登录窗口，请允许本站弹出窗口后再试。所选音频和草稿仍保留。'));
     busy = true; notify();
     return new Promise((resolve, reject) => {
       let timer, interval;
@@ -32,12 +33,15 @@ export function createServerPublisher(backendOrigin, browser = window) {
         if (action === 'publish' && (!/^diary\/\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-new-diary-[a-f0-9]{16}\.md$/.test(data.result?.path) || data.result?.fileUrl !== 'https://github.com/wasdwry/wasdwry.github.io/blob/main/' + data.result.path)) {
           finish(new Error('提交结果格式有误，草稿仍保留，请返回书桌重试。')); return;
         }
+        if (action === 'uploadMusic' && !isMusicUploadResult(data.result)) {
+          finish(new Error('上传结果格式有误，请重试；所选音频仍保留。')); return;
+        }
         connected = action !== 'logout'; finish(null, data.result);
       }
       browser.addEventListener('message', receive);
       pending = () => finish(new Error('页面已离开，草稿仍保留。重新打开后可继续使用已保存的登录。'));
       interval = browser.setInterval(() => {
-        if (popup.closed) finish(new Error('窗口已关闭。若刚完成登录，请再点击一次发布；登录会继续保留，草稿也仍在。'));
+        if (popup.closed) finish(new Error('窗口已关闭。若刚完成登录，请再次点击发布或上传；登录会继续保留，所选音频和草稿也仍在。'));
       }, 500);
       timer = browser.setTimeout(() => finish(new Error('等待窗口超时。请关闭旧窗口后重试；已保存的登录和草稿仍保留。')), 300000);
     });
@@ -48,6 +52,11 @@ export function createServerPublisher(backendOrigin, browser = window) {
     connect: () => run('connect'),
     disconnect: () => run('logout'),
     publish: (date, content) => run('publish', { date, content }),
+    uploadMusic(file) {
+      try { validateMusicFile(file?.name, file?.size); }
+      catch (error) { return Promise.reject(error); }
+      return run('uploadMusic', { file });
+    },
     // Navigating away must never call /logout. The HttpOnly cookie survives page closure.
     dispose() { pending?.(); }
   });

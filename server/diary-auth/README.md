@@ -58,11 +58,11 @@ npm run deploy
 
 将应用设置页的 **Client ID** 填入 `GITHUB_CLIENT_ID`（不是 App ID）。从安装详情页地址 `/settings/installations/数字` 中取得安装 ID，填入 `GITHUB_INSTALLATION_ID`。
 
-在应用设置页生成 **Client secret** 和 **Private key**。这些是秘密，只放入 Cloudflare Secrets，不要写入代码、仓库变量、日记或聊天。下载的 `.pem` 文件留在本机安全位置。
+在应用设置页进入 **Credentials → Client secrets → New secret**，生成后立即复制完整 Client secret；列表中的星号和尾号不能用于配置。如果没有保存完整值，需要重新生成。再到 **Credentials → Key pairs → New key** 下载私钥。这些是秘密，只放入 Cloudflare Secrets，不要写入代码、仓库变量、日记或聊天。下载的 `.pem` 文件留在本机安全位置，已有对应私钥文件时无需重复生成。
 
 ### 3. 把两个秘密交给后台
 
-在 Cloudflare 控制台进入新建的 `wasdwry-diary-auth` → Settings → Variables and Secrets。添加两项 **Secret**：
+在 Cloudflare 控制台进入新建的 `wasdwry-diary-auth` → Settings → Runtime variables and secrets → Add variable。将名称填入 **Key**、完整内容填入 **Value**，勾选 **Secret** 后保存并部署。需要以下两项：
 
 | Secret 名称 | 内容 |
 | --- | --- |

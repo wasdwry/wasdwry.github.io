@@ -1,7 +1,7 @@
 import { entryFromHash, entryHash } from './diary-core.mjs';
 import { createGitHubPublisher } from './diary-publish.mjs?v=20261016-auth1';
 import { createServerPublisher } from './diary-server-publish.mjs?v=20261016-auth1';
-import { publishingConfig } from './publishing-config.mjs?v=20261016-auth1';
+import { publishingConfig } from './publishing-config.mjs?v=20261016-auth2';
 window.WasdwryDiaryPublisher = publishingConfig.backendOrigin ? createServerPublisher(publishingConfig.backendOrigin) : createGitHubPublisher();
 window.addEventListener('pagehide', () => {
   const publisher = window.WasdwryDiaryPublisher;

@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createWorker } from '../server/diary-auth/worker.mjs';
+import { createGitHub } from '../server/diary-auth/github.mjs';
 import { appJWT, digest } from '../server/diary-auth/crypto.mjs';
 
 const ORIGIN = 'https://diary.test', CHANNEL = 'x'.repeat(43);
@@ -69,6 +70,17 @@ test('GitHub RSA key formats produce verifiable short-lived JWTs', async () => {
     assert.equal(createVerify('RSA-SHA256').update(header + '.' + payload).verify(keys.publicKey, Buffer.from(signature, 'base64url')), true);
     assert.deepEqual(JSON.parse(Buffer.from(payload, 'base64url')), { iat: 1799999940, exp: 1800000540, iss: 'Iv1.test' });
   }
+});
+
+test('GitHub redirects are rejected without forwarding login credentials', async () => {
+  const calls = [];
+  const github = createGitHub(async (url, options) => {
+    calls.push(url);
+    assert.equal(options.redirect, 'manual', 'Workers requires manual handling to reject redirects');
+    return new Response(null, { status: 302, headers: { Location: 'https://untrusted.test/collect' } });
+  }, () => 1800000000);
+  await assert.rejects(github.identify({ GITHUB_CLIENT_ID: 'test', GITHUB_CLIENT_SECRET: 'fake-secret', PUBLIC_ORIGIN: ORIGIN }, 'fake-code', 'fake-verifier'), /GitHub 未完成操作/);
+  assert.deepEqual(calls, ['https://github.com/login/oauth/access_token']);
 });
 test('OAuth state is bound to browser and PKCE, single-use, and expires', async t => {
   const f = fixture(); t.after(() => f.sqlite.close());

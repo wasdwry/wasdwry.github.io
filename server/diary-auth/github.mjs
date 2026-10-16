@@ -11,7 +11,8 @@ export function createGitHub(fetchImpl, now) {
     let response;
     try {
       response = await fetchImpl(url, {
-        method, redirect: 'error', signal: AbortSignal.timeout(20000),
+        // Workers supports manual/follow; reject 3xx below without forwarding credentials.
+        method, redirect: 'manual', signal: AbortSignal.timeout(20000),
         headers: { Accept: url.startsWith('https://github.com/') ? 'application/json' : 'application/vnd.github+json', 'User-Agent': 'wasdwry-diary-auth',
           'X-GitHub-Api-Version': '2022-11-28', ...(token ? { Authorization: 'Bearer ' + token } : {}),
           ...(body ? { 'Content-Type': 'application/json' } : {}) },

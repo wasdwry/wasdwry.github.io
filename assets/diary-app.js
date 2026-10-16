@@ -71,17 +71,25 @@ $('createLink').onclick = e => { flushDraft(); if (!$('entryDate').reportValidit
 // The publisher lives in the host page, so closing the desk does not lose the connection.
 const publisher = parent.WasdwryDiaryPublisher;
 function connectionState(state) {
+  const server = state.mode === 'server';
   $('publishDiary').disabled = Boolean(state.busy);
   $('connectGithub').disabled = Boolean(state.busy);
+  $('loginGithub').disabled = Boolean(state.busy);
   $('disconnectGithub').disabled = Boolean(state.busy);
-  $('connectionForm').hidden = state.connected;
-  $('disconnectGithub').hidden = !state.connected;
-  $('connectionStatus').textContent = state.connected ? '已连接 ' + state.login + '，本次打开网站期间有效。' : '尚未连接。连接后可直接发布，无需复制正文。';
+  $('connectionForm').hidden = server || state.connected;
+  $('serverConnection').hidden = !server;
+  $('loginGithub').hidden = state.connected;
+  $('disconnectGithub').hidden = !server && !state.connected;
+  $('disconnectGithub').textContent = server ? '退出这台设备的登录' : '断开连接';
+  $('connectionStatus').textContent = server
+    ? state.connected ? '已登录 ' + state.login + '。刷新或关闭网站后仍可继续发布。' : '点击发布时会检查已保存的登录；首次使用或登录到期时，请在弹出的窗口中登录。'
+    : state.connected ? '已连接 ' + state.login + '，本次打开网站期间有效。' : '尚未连接。连接后可直接发布，无需复制正文。';
 }
 if (publisher) {
   connectionState(publisher.status());
-  const unsubscribe = publisher.subscribe(connectionState);
-  window.addEventListener('pagehide', () => { $('githubToken').value = ''; unsubscribe(); }, { once: true });
+  let unsubscribe = publisher.subscribe(connectionState);
+  window.addEventListener('pagehide', () => { $('githubToken').value = ''; unsubscribe?.(); unsubscribe = null; });
+  window.addEventListener('pageshow', () => { if (!unsubscribe) { unsubscribe = publisher.subscribe(connectionState); connectionState(publisher.status()); } });
 } else {
   $('publishDiary').disabled = true; $('connectGithub').disabled = true;
   $('connectionStatus').textContent = '发布组件尚未就绪，请刷新网站后重试。';
@@ -100,21 +108,25 @@ $('connectGithub').onclick = async () => {
   }
 };
 $('githubToken').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('connectGithub').click(); } };
-$('disconnectGithub').onclick = () => {
-  publisher?.disconnect(); $('githubToken').value = ''; $('publishStatus').textContent = '已断开 GitHub 连接。';
+$('loginGithub').onclick = () => $('connectGithub').click();
+$('disconnectGithub').onclick = async () => {
+  if (!publisher) return;
+  $('githubToken').value = '';
+  try { await publisher.disconnect(); $('publishStatus').textContent = publisher.status().mode === 'server' ? '已退出这台设备的登录。' : '已断开 GitHub 连接。'; }
+  catch (error) { $('publishStatus').textContent = error.message; }
 };
 $('publishDiary').onclick = async () => {
   flushDraft();
   if (!publisher) return;
   if (!$('entryDate').reportValidity()) return;
   if (!$('entryContent').value.trim()) { $('publishStatus').textContent = '请先写下日记正文。'; $('entryContent').focus(); return; }
-  if (!publisher.status().connected) {
+  if (publisher.status().mode !== 'server' && !publisher.status().connected) {
     $('publishSettings').open = true; $('publishStatus').textContent = '首次发布，请先连接站点作者的 GitHub 账号。';
     $('githubToken').focus(); return;
   }
   const draft = snapshot();
   $('publishResult').hidden = true; $('publishResult').replaceChildren();
-  $('publishStatus').textContent = '正在提交到日记仓库…'; $('publishDiary').textContent = '正在提交…';
+  $('publishStatus').textContent = publisher.status().mode === 'server' ? '请在弹出的窗口中继续，已保存的登录会自动恢复。' : '正在提交到日记仓库…'; $('publishDiary').textContent = '正在提交…';
   try {
     const saved = await publisher.publish(draft.date, draft.content);
     $('publishStatus').textContent = saved.alreadyPublished ? '这份内容已在仓库中，没有重复发布。草稿仍保留。' : '已提交到仓库。网站正在自动更新，草稿仍保留。';

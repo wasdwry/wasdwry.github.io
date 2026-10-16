@@ -1,5 +1,5 @@
 export default `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>山海小屋 · 日记簿</title><link rel="stylesheet" href="assets/diary.css?v=20261016-publish1"></head>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>山海小屋 · 日记簿</title><link rel="stylesheet" href="assets/diary.css?v=20261016-auth1"></head>
 <body class="desk-__DESK_MODE__" data-initial-entry="__INITIAL_ENTRY__">
 <main class="page">
  <header class="page-header"><div><h1 id="viewTitle">日记簿</h1><p id="viewSubtitle" class="muted">把平凡的日子，慢慢收进书里。</p></div><button id="toggleCompose" aria-controls="compose" aria-expanded="false">写一篇</button></header>
@@ -23,6 +23,7 @@ export default `<!doctype html>
    <p class="draft-note">发布后访客可公开阅读。提交会新增一篇日记，不会覆盖已有内容；草稿仍留在这台设备上。</p>
    <details id="publishSettings" class="publish-settings"><summary>连接 GitHub · 仅站点作者</summary>
     <p id="connectionStatus" class="status" role="status">尚未连接。连接后可直接发布，无需复制正文。</p>
+    <div id="serverConnection" hidden><p class="draft-note">使用 GitHub 登录后，这台设备最多保持登录 30 天。刷新或关闭网站不会退出；再次发布时会自动恢复登录。仓库凭据保留在后台。</p><button type="button" id="loginGithub">用 GitHub 登录</button></div>
     <div id="connectionForm">
      <p class="draft-note">首次使用：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建 Fine-grained token ↗</a>，仅选择 wasdwry.github.io 仓库，将 Contents 设为 Read and write，并设置有效期。</p>
      <label class="field"><span>GitHub 专用令牌</span><input id="githubToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-describedby="tokenNotice"></label>
@@ -46,5 +47,5 @@ export default `<!doctype html>
   <footer class="reader-footer"><button id="showComments" hidden>留言</button><a id="readerGithubLink" target="_blank" rel="noopener noreferrer">在 GitHub 查看 ↗</a></footer><div id="commentsMount" hidden></div>
  </div>
 </dialog>
-<script src="assets/comments-config.js" defer></script><script src="assets/comments.js" defer></script><script type="module" src="assets/diary-app.js?v=20261016-publish1"></script>
+<script src="assets/comments-config.js" defer></script><script src="assets/comments.js" defer></script><script type="module" src="assets/diary-app.js?v=20261016-auth1"></script>
 </body></html>`;

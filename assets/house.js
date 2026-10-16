@@ -1,7 +1,12 @@
 import { entryFromHash, entryHash } from './diary-core.mjs';
-import { createGitHubPublisher } from './diary-publish.mjs?v=20261016-publish1';
-window.WasdwryDiaryPublisher = createGitHubPublisher();
-window.addEventListener('pagehide', () => window.WasdwryDiaryPublisher.disconnect());
+import { createGitHubPublisher } from './diary-publish.mjs?v=20261016-auth1';
+import { createServerPublisher } from './diary-server-publish.mjs?v=20261016-auth1';
+import { publishingConfig } from './publishing-config.mjs?v=20261016-auth1';
+window.WasdwryDiaryPublisher = publishingConfig.backendOrigin ? createServerPublisher(publishingConfig.backendOrigin) : createGitHubPublisher();
+window.addEventListener('pagehide', () => {
+  const publisher = window.WasdwryDiaryPublisher;
+  if (publisher.status().mode === 'server') publisher.dispose(); else publisher.disconnect();
+});
 /* All room transitions remain in this document; existing publishing tools open on the desk. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id),scenes=['outside','hall','study'];let scene='outside',lastFocus=null,noticeTimer,transition=0;
@@ -21,7 +26,7 @@ let deskRequest=0,activeTool=null,lastRouteHash=location.hash;
 function preserveDesk(){try{$('deskFrame').contentWindow.WasdwryDiary?.flushDraft();}catch(_){}}
 async function openTool(tool,initialEntry=''){
  const [kind,mode,title]=toolMap[tool],request=++deskRequest;preserveDesk();activeTool=kind;lastFocus=document.querySelector('[data-tool="'+tool+'"]');shelf(false);$('deskTitle').textContent=title;$('deskFrame').title=title;$('deskFrame').srcdoc='<p style="padding:24px;color:#65513b">正在打开……</p>';if(!$('deskDialog').open)$('deskDialog').showModal();
- try{const {default:markup}=await import('./desk-'+kind+'.js?v=20261016-publish1');if(request!==deskRequest||!$('deskDialog').open)return;$('deskFrame').srcdoc=markup.replace('__DESK_MODE__',mode).replace('__INITIAL_ENTRY__',encodeURIComponent(initialEntry));}catch(_){if(request===deskRequest&&$('deskDialog').open)$('deskFrame').srcdoc='<p style="padding:24px;color:#65513b">暂时无法打开，请合上后重试。</p>';}
+ try{const {default:markup}=await import('./desk-'+kind+'.js?v=20261016-auth1');if(request!==deskRequest||!$('deskDialog').open)return;$('deskFrame').srcdoc=markup.replace('__DESK_MODE__',mode).replace('__INITIAL_ENTRY__',encodeURIComponent(initialEntry));}catch(_){if(request===deskRequest&&$('deskDialog').open)$('deskFrame').srcdoc='<p style="padding:24px;color:#65513b">暂时无法打开，请合上后重试。</p>';}
 }
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>openTool(b.dataset.tool)));
 function clearDiaryRoute(){if(entryFromHash(location.hash)){history.replaceState({scene:'study'},'','#study');lastRouteHash=location.hash;}}

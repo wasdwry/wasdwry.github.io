@@ -1,0 +1,10 @@
+{
+  "name": "wasdwry-diary-auth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "wrangler deploy --dry-run --config wrangler.example.jsonc",
+    "deploy": "wrangler deploy --config wrangler.local.jsonc"
+  },
+  "devDependencies": { "wrangler": "4.151.0" }
+}

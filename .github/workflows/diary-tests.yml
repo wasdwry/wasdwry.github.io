@@ -4,11 +4,13 @@ on:
     branches: [main]
     paths:
       - 'assets/diary-*.mjs'
+      - 'server/diary-auth/**'
       - 'tests/**'
       - '.github/workflows/diary-tests.yml'
   pull_request:
     paths:
       - 'assets/diary-*.mjs'
+      - 'server/diary-auth/**'
       - 'tests/**'
       - '.github/workflows/diary-tests.yml'
 permissions:
@@ -18,4 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: node --test tests/diary-core.test.mjs tests/diary-publish.test.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/*.test.mjs

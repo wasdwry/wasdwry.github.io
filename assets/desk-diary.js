@@ -1,5 +1,5 @@
 export default `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>山海小屋 · 日记簿</title><link rel="stylesheet" href="assets/diary.css?v=20261015-diary1"></head>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>山海小屋 · 日记簿</title><link rel="stylesheet" href="assets/diary.css?v=20261016-publish1"></head>
 <body class="desk-__DESK_MODE__" data-initial-entry="__INITIAL_ENTRY__">
 <main class="page">
  <header class="page-header"><div><h1 id="viewTitle">日记簿</h1><p id="viewSubtitle" class="muted">把平凡的日子，慢慢收进书里。</p></div><button id="toggleCompose" aria-controls="compose" aria-expanded="false">写一篇</button></header>
@@ -18,8 +18,20 @@ export default `<!doctype html>
    <label class="field"><span>日期与时间</span><input id="entryDate" type="datetime-local" required></label>
    <label class="field"><span>正文</span><textarea id="entryContent" placeholder="今天，有什么想留下的？"></textarea></label>
    <p id="draftStatus" class="status" role="status"></p>
-   <div class="actions"><button type="button" id="downloadDraft" class="primary">导出 Markdown</button><button type="button" id="copyMarkdown">复制正文</button><a id="createLink" class="button" href="https://github.com/wasdwry/wasdwry.github.io/new/main/diary" target="_blank" rel="noopener noreferrer">去 GitHub 发布 ↗</a></div>
-   <p class="draft-note">草稿自动保存在这台设备的浏览器中。导出可留存备份；发布时先复制，再到 GitHub 粘贴并提交。</p>
+   <div class="actions"><button type="button" id="publishDiary" class="primary">发布日记</button><button type="button" id="downloadDraft">导出 Markdown</button><button type="button" id="copyMarkdown">复制正文</button></div>
+   <p id="publishStatus" class="status" role="status"></p><div id="publishResult" class="publish-result" hidden></div>
+   <p class="draft-note">发布后访客可公开阅读。提交会新增一篇日记，不会覆盖已有内容；草稿仍留在这台设备上。</p>
+   <details id="publishSettings" class="publish-settings"><summary>连接 GitHub · 仅站点作者</summary>
+    <p id="connectionStatus" class="status" role="status">尚未连接。连接后可直接发布，无需复制正文。</p>
+    <div id="connectionForm">
+     <p class="draft-note">首次使用：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建 Fine-grained token ↗</a>，仅选择 wasdwry.github.io 仓库，将 Contents 设为 Read and write，并设置有效期。</p>
+     <label class="field"><span>GitHub 专用令牌</span><input id="githubToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-describedby="tokenNotice"></label>
+     <p id="tokenNotice" class="draft-note">令牌只发送给 GitHub，并仅在当前页面内存中保留。刷新或关闭网站后需重新连接，请勿把令牌写入日记。</p>
+     <button type="button" id="connectGithub">连接 GitHub</button>
+    </div>
+    <button type="button" id="disconnectGithub" hidden>断开连接</button>
+   </details>
+   <p class="draft-note">也可以<a id="createLink" href="https://github.com/wasdwry/wasdwry.github.io/new/main/diary" target="_blank" rel="noopener noreferrer">前往 GitHub 手动发布 ↗</a>。</p>
    <div class="actions"><button type="button" id="deleteDraft">清空草稿</button><button type="button" id="undoDraft" hidden>撤销清空</button></div><p id="draftActionStatus" class="status" role="status"></p>
   </form>
  </section>
@@ -34,5 +46,5 @@ export default `<!doctype html>
   <footer class="reader-footer"><button id="showComments" hidden>留言</button><a id="readerGithubLink" target="_blank" rel="noopener noreferrer">在 GitHub 查看 ↗</a></footer><div id="commentsMount" hidden></div>
  </div>
 </dialog>
-<script src="assets/comments-config.js" defer></script><script src="assets/comments.js" defer></script><script type="module" src="assets/diary-app.js?v=20261015-diary1"></script>
+<script src="assets/comments-config.js" defer></script><script src="assets/comments.js" defer></script><script type="module" src="assets/diary-app.js?v=20261016-publish1"></script>
 </body></html>`;

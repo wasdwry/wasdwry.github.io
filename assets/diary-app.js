@@ -68,6 +68,66 @@ $('downloadDraft').onclick = () => {
   $('draftActionStatus').textContent = '已准备好草稿文件，请保留下载的备份。';
 };
 $('createLink').onclick = e => { flushDraft(); if (!$('entryDate').reportValidity()) e.preventDefault(); };
+// The publisher lives in the host page, so closing the desk does not lose the connection.
+const publisher = parent.WasdwryDiaryPublisher;
+function connectionState(state) {
+  $('publishDiary').disabled = Boolean(state.busy);
+  $('connectGithub').disabled = Boolean(state.busy);
+  $('disconnectGithub').disabled = Boolean(state.busy);
+  $('connectionForm').hidden = state.connected;
+  $('disconnectGithub').hidden = !state.connected;
+  $('connectionStatus').textContent = state.connected ? '已连接 ' + state.login + '，本次打开网站期间有效。' : '尚未连接。连接后可直接发布，无需复制正文。';
+}
+if (publisher) {
+  connectionState(publisher.status());
+  const unsubscribe = publisher.subscribe(connectionState);
+  window.addEventListener('pagehide', () => { $('githubToken').value = ''; unsubscribe(); }, { once: true });
+} else {
+  $('publishDiary').disabled = true; $('connectGithub').disabled = true;
+  $('connectionStatus').textContent = '发布组件尚未就绪，请刷新网站后重试。';
+}
+$('connectGithub').onclick = async () => {
+  if (!publisher) return;
+  let token = $('githubToken').value; $('githubToken').value = '';
+  $('connectionStatus').textContent = '正在验证 GitHub 连接…';
+  try {
+    const pending = publisher.connect(token); token = '';
+    await pending; connectionState(publisher.status());
+    $('publishStatus').textContent = '已连接。检查正文后，点击“发布日记”即可提交。';
+    $('publishSettings').open = false;
+  } catch (error) {
+    token = ''; connectionState(publisher.status()); $('connectionStatus').textContent = error.message;
+  }
+};
+$('githubToken').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('connectGithub').click(); } };
+$('disconnectGithub').onclick = () => {
+  publisher?.disconnect(); $('githubToken').value = ''; $('publishStatus').textContent = '已断开 GitHub 连接。';
+};
+$('publishDiary').onclick = async () => {
+  flushDraft();
+  if (!publisher) return;
+  if (!$('entryDate').reportValidity()) return;
+  if (!$('entryContent').value.trim()) { $('publishStatus').textContent = '请先写下日记正文。'; $('entryContent').focus(); return; }
+  if (!publisher.status().connected) {
+    $('publishSettings').open = true; $('publishStatus').textContent = '首次发布，请先连接站点作者的 GitHub 账号。';
+    $('githubToken').focus(); return;
+  }
+  const draft = snapshot();
+  $('publishResult').hidden = true; $('publishResult').replaceChildren();
+  $('publishStatus').textContent = '正在提交到日记仓库…'; $('publishDiary').textContent = '正在提交…';
+  try {
+    const saved = await publisher.publish(draft.date, draft.content);
+    $('publishStatus').textContent = saved.alreadyPublished ? '这份内容已在仓库中，没有重复发布。草稿仍保留。' : '已提交到仓库。网站正在自动更新，草稿仍保留。';
+    const result = $('publishResult'); result.hidden = false;
+    const note = document.createElement('p'); note.textContent = '网页更新完成后，新日记会出现在目录中。';
+    result.append(note);
+    for (const [label, href] of [['查看已提交的日记 ↗', saved.fileUrl], ['查看网站更新进度 ↗', 'https://github.com/wasdwry/wasdwry.github.io/actions']]) {
+      const a = document.createElement('a'); a.textContent = label; a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; result.append(a);
+    }
+    indexLoaded = false; searchData = null;
+  } catch (error) { $('publishStatus').textContent = error.message; }
+  finally { $('publishDiary').textContent = '发布日记'; connectionState(publisher.status()); }
+};
 $('deleteDraft').onclick = () => {
   undoDraft = snapshot(); clearTimeout(draftTimer); dirty = false;
   $('entryContent').value = ''; $('entryDate').value = localDate(); updatePublishLink();

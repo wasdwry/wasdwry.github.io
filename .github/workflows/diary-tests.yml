@@ -5,6 +5,8 @@ on:
     paths:
       - 'assets/diary-*.mjs'
       - 'assets/scene-clock.mjs'
+      - 'assets/music-player.js'
+      - 'scripts/build-music-playlist.mjs'
       - 'server/diary-auth/**'
       - 'tests/**'
       - '.github/workflows/diary-tests.yml'
@@ -12,6 +14,8 @@ on:
     paths:
       - 'assets/diary-*.mjs'
       - 'assets/scene-clock.mjs'
+      - 'assets/music-player.js'
+      - 'scripts/build-music-playlist.mjs'
       - 'server/diary-auth/**'
       - 'tests/**'
       - '.github/workflows/diary-tests.yml'

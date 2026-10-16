@@ -4,12 +4,14 @@ on:
     branches: [main]
     paths:
       - 'assets/diary-*.mjs'
+      - 'assets/scene-clock.mjs'
       - 'server/diary-auth/**'
       - 'tests/**'
       - '.github/workflows/diary-tests.yml'
   pull_request:
     paths:
       - 'assets/diary-*.mjs'
+      - 'assets/scene-clock.mjs'
       - 'server/diary-auth/**'
       - 'tests/**'
       - '.github/workflows/diary-tests.yml'

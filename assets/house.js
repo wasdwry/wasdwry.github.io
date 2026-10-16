@@ -1,4 +1,5 @@
 import { entryFromHash, entryHash } from './diary-core.mjs';
+import { coverGeometry } from './scene-clock.mjs';
 import { createGitHubPublisher } from './diary-publish.mjs?v=20261016-auth1';
 import { createServerPublisher } from './diary-server-publish.mjs?v=20261016-auth1';
 import { publishingConfig } from './publishing-config.mjs?v=20261016-auth2';
@@ -10,8 +11,7 @@ window.addEventListener('pagehide', () => {
 /* All room transitions remain in this document; existing publishing tools open on the desk. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id),scenes=['outside','hall','study'];let scene='outside',lastFocus=null,noticeTimer,transition=0;
-const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-function cabinLayout(){const w=innerWidth,h=innerHeight,s=Math.max(w/1716,h/916),iw=1716*s,ih=916*s,x=w<700?0:(w-iw)/2;const a=$('cabinArea');a.style.cssText=`left:${Math.max(8,x+.017*iw)}px;top:${.475*ih}px;width:${Math.min(.247*iw,w-Math.max(8,x+.017*iw)-8)}px;height:${.31*ih}px`;}
+function cabinLayout(){const w=innerWidth,{width:iw,height:ih,x}=coverGeometry(w,innerHeight);const a=$('cabinArea');a.style.cssText=`left:${Math.max(8,x+.017*iw)}px;top:${.475*ih}px;width:${Math.min(.247*iw,w-Math.max(8,x+.017*iw)-8)}px;height:${.31*ih}px`;}
 $('cabinHotspot').addEventListener('click',()=>changeScene('hall'));
 document.addEventListener('pointerdown',e=>{if(!$('bookshelf').contains(e.target)&&!$('shelfMenu').contains(e.target))shelf(false);});
 function shelf(open){$('shelfMenu').hidden=!open;$('bookshelf').setAttribute('aria-expanded',String(open));}
@@ -53,5 +53,5 @@ async function restoreRoute(){
 }
 function onRouteChange(){if(lastRouteHash===location.hash)return;lastRouteHash=location.hash;restoreRoute();}
 window.addEventListener('popstate',onRouteChange);window.addEventListener('hashchange',onRouteChange);
-reduced.addEventListener('change',()=>document.body.classList.toggle('motion-paused',reduced.matches));document.body.classList.toggle('motion-paused',reduced.matches);window.addEventListener('resize',cabinLayout);cabinLayout();restoreRoute();
+window.addEventListener('resize',cabinLayout);cabinLayout();restoreRoute();
 })();

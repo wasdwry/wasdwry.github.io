@@ -26,13 +26,19 @@ function route(path) { if (parent !== window) parent.postMessage({ type: 'diary:
 
 // Existing drafts use the same key and fields; saving never depends on the network.
 const restored = readDraft(storage);
-$('entryDate').value = restored.draft?.date || localDate();
 $('entryContent').value = restored.draft?.content || '';
-$('draftStatus').textContent = restored.error ? '无法读取本机草稿。写作后请导出备份。' : restored.draft ? '已恢复本机草稿。' : '开始写作后，将自动保存草稿。';
+$('entryDate').value = $('entryContent').value.trim() ? restored.draft.date || localDate() : localDate();
+$('draftStatus').textContent = restored.error ? '无法读取本机草稿。写作后请导出备份。' : $('entryContent').value.trim() ? '已恢复本机草稿。' : '开始写作后，将自动保存草稿。';
 let dirty = false, draftTimer, undoDraft = null;
 function snapshot() { return { date: $('entryDate').value, content: $('entryContent').value, savedAt: new Date().toISOString() }; }
+function refreshEmptyDate() {
+  if ($('entryContent').value.trim()) return;
+  const date = localDate();
+  if ($('entryDate').value !== date) { $('entryDate').value = date; updatePublishLink(); }
+}
 function flushDraft() {
   clearTimeout(draftTimer);
+  refreshEmptyDate();
   if (!dirty) return true;
   const success = writeDraft(storage, snapshot());
   if (success) dirty = false;
@@ -44,9 +50,16 @@ function updatePublishLink() {
   $('createLink').href = 'https://github.com/wasdwry/wasdwry.github.io/new/main/diary?filename=' + encodeURIComponent(filename);
 }
 for (const id of ['entryDate', 'entryContent']) $(id).addEventListener('input', () => {
+  if (id === 'entryContent') refreshEmptyDate();
   dirty = true; clearTimeout(draftTimer); $('draftStatus').textContent = '正在保存…';
   draftTimer = setTimeout(flushDraft, 600); updatePublishLink();
 });
+$('entryContent').addEventListener('focus', refreshEmptyDate);
+// Capture the current time before the first keystroke, including after midnight or sleep.
+$('entryContent').addEventListener('beforeinput', refreshEmptyDate);
+window.addEventListener('focus', refreshEmptyDate);
+window.addEventListener('pageshow', refreshEmptyDate);
+setInterval(() => { if (!document.hidden) refreshEmptyDate(); }, 30000);
 updatePublishLink();
 $('entryForm').onsubmit = e => e.preventDefault();
 function markdown() { return draftMarkdown($('entryDate').value, $('entryContent').value); }
@@ -115,6 +128,27 @@ $('disconnectGithub').onclick = async () => {
   try { await publisher.disconnect(); $('publishStatus').textContent = publisher.status().mode === 'server' ? '已退出这台设备的登录。' : '已断开 GitHub 连接。'; }
   catch (error) { $('publishStatus').textContent = error.message; }
 };
+function clearPublishedDraft(published) {
+  const sameDraft = draft => draft?.date === published.date && draft?.content === published.content;
+  // Publishing is asynchronous: never erase edits made while the request was in flight.
+  if (!sameDraft(snapshot())) { flushDraft(); return 'newer'; }
+  clearTimeout(draftTimer); dirty = false; undoDraft = null;
+  $('undoDraft').hidden = true;
+  $('entryContent').value = ''; $('entryDate').value = localDate(); updatePublishLink();
+  const stored = readDraft(storage);
+  let result = 'cleared';
+  if (stored.error) result = 'storage-error';
+  // Another tab may have saved a different draft. Clear only the submitted version.
+  else if (stored.draft && !sameDraft(stored.draft)) result = 'other-draft';
+  else {
+    try { storage.removeItem(DRAFT_KEY); }
+    catch { if (!writeDraft(storage, snapshot())) result = 'storage-error'; }
+  }
+  $('draftStatus').textContent = result === 'storage-error' ? '编辑区已清空，但无法清除本机草稿；重新打开时请留意旧内容。'
+    : result === 'other-draft' ? '本窗口草稿已清空，其他窗口保存的草稿仍保留。' : '草稿已清空，日期已更新，可以开始下一篇。';
+  $('draftActionStatus').textContent = '';
+  return result;
+}
 $('publishDiary').onclick = async () => {
   flushDraft();
   if (!publisher) return;
@@ -129,7 +163,9 @@ $('publishDiary').onclick = async () => {
   $('publishStatus').textContent = publisher.status().mode === 'server' ? '请在弹出的窗口中继续，已保存的登录会自动恢复。' : '正在提交到日记仓库…'; $('publishDiary').textContent = '正在提交…';
   try {
     const saved = await publisher.publish(draft.date, draft.content);
-    $('publishStatus').textContent = saved.alreadyPublished ? '这份内容已在仓库中，没有重复发布。草稿仍保留。' : '已提交到仓库。网站正在自动更新，草稿仍保留。';
+    const cleared = clearPublishedDraft(draft);
+    $('publishStatus').textContent = (saved.alreadyPublished ? '这份内容已在仓库中，没有重复发布。' : '已提交到仓库，网站正在自动更新。')
+      + (cleared === 'newer' ? '您在提交期间修改的草稿仍保留。' : cleared === 'storage-error' ? '编辑区已清空，但本机草稿清理失败。' : '草稿已清空，日期已更新。');
     const result = $('publishResult'); result.hidden = false;
     const note = document.createElement('p'); note.textContent = '网页更新完成后，新日记会出现在目录中。';
     result.append(note);
@@ -159,7 +195,7 @@ function setWriting(next) {
   $('viewSubtitle').textContent = next ? '不必写得完美，留下此刻就好。' : '把平凡的日子，慢慢收进书里。';
   $('toggleCompose').textContent = next ? '翻阅日记' : '写一篇';
   $('toggleCompose').setAttribute('aria-expanded', String(next));
-  if (next) $('entryContent').focus(); else { flushDraft(); ensureIndex(); }
+  if (next) { refreshEmptyDate(); $('entryContent').focus(); } else { flushDraft(); ensureIndex(); }
 }
 $('toggleCompose').onclick = () => setWriting(!writing);
 
@@ -379,7 +415,7 @@ $('showComments').onclick = () => {
 };
 function preserve() { flushDraft(); savePosition(); }
 window.addEventListener('pagehide', preserve);
-document.addEventListener('visibilitychange', () => { if (document.hidden) preserve(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) preserve(); else refreshEmptyDate(); });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('readerModal').open) { preserve(); parent.postMessage('close-desk', parentOrigin); }
 });

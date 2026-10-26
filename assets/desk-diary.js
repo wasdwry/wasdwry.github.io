@@ -20,7 +20,7 @@ export default `<!doctype html>
    <p id="draftStatus" class="status" role="status"></p>
    <div class="actions"><button type="button" id="publishDiary" class="primary">发布日记</button><button type="button" id="downloadDraft">导出 Markdown</button><button type="button" id="copyMarkdown">复制正文</button></div>
    <p id="publishStatus" class="status" role="status"></p><div id="publishResult" class="publish-result" hidden></div>
-   <p class="draft-note">发布后访客可公开阅读。提交会新增一篇日记，不会覆盖已有内容；草稿仍留在这台设备上。</p>
+   <p class="draft-note">发布后访客可公开阅读。空白日记会自动更新日期，写下正文后保留日期；发布成功后清空草稿，开始下一篇。</p>
    <details id="publishSettings" class="publish-settings"><summary>连接 GitHub · 仅站点作者</summary>
     <p id="connectionStatus" class="status" role="status">尚未连接。连接后可直接发布，无需复制正文。</p>
     <div id="serverConnection" hidden><p class="draft-note">使用 GitHub 登录后，这台设备最多保持登录 30 天。刷新或关闭网站不会退出；再次发布时会自动恢复登录。仓库凭据保留在后台。</p><button type="button" id="loginGithub">用 GitHub 登录</button></div>
@@ -47,5 +47,5 @@ export default `<!doctype html>
   <footer class="reader-footer"><button id="showComments" hidden>留言</button><a id="readerGithubLink" target="_blank" rel="noopener noreferrer">在 GitHub 查看 ↗</a></footer><div id="commentsMount" hidden></div>
  </div>
 </dialog>
-<script src="assets/comments-config.js" defer></script><script src="assets/comments.js" defer></script><script type="module" src="assets/diary-app.js?v=20261016-auth1"></script>
+<script src="assets/comments-config.js" defer></script><script src="assets/comments.js" defer></script><script type="module" src="assets/diary-app.js?v=20261026-draft1"></script>
 </body></html>`;

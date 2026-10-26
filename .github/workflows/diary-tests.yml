@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'assets/diary-*.mjs'
+      - 'assets/diary-app.js'
+      - 'assets/desk-diary.js'
       - 'assets/scene-clock.mjs'
       - 'assets/music-player.js'
       - 'assets/music-upload.mjs'
@@ -14,6 +16,8 @@ on:
   pull_request:
     paths:
       - 'assets/diary-*.mjs'
+      - 'assets/diary-app.js'
+      - 'assets/desk-diary.js'
       - 'assets/scene-clock.mjs'
       - 'assets/music-player.js'
       - 'assets/music-upload.mjs'
